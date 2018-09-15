@@ -25,7 +25,7 @@
     border-radius:4px;
     position:absolute;
   }
-  #controls {
+  #controls-panel {
     max-width: 30em;
     height: 90vh;
     overflow: auto;
@@ -33,69 +33,76 @@
     right: 5px;
     background-color: #ccc;
   }
-  #controls > fieldset {
+  #controls-list {
+    margin: 0;
+    padding: 0;
+  }
+  #controls-list > li {
     display: flex;
+    flex-wrap: wrap;
     overflow: hidden;
-    height: 1.5em;
+    padding: 4px 8px 4px 28px;
     opacity: 0.6;
     color: #000;
+    list-style-type: none;
+    position: relative;
   }
-  #controls > fieldset.selected {
+  #controls-list > li.selected {
     overflow: visible;
     opacity: 1;
   }
-  #controls > fieldset > * {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  #controls-list > li > input[type="radio"] {
+    position: absolute;
+    left: 0;
+    top: 4px;
+  }
+  #controls-list > li h2 {
+    width: 100%;
+  }
+  #controls-list > li label.param {
     margin: 0 0.5em;
+  }
+  #send {
+    box-sizing: border-box;
+    width: 100%;
+  }
+  #controls-panel footer {
+    position: sticky;
+    bottom: 0;
+    padding: 1em 1em 1em 28px;
+    border-top: 1px solid #fff;
+    background-color: #ccddff;
   }
 </style>
 </head>
 <body>
 
-<section id="controls">
-  <fieldset>
-    <input name="animation" type="radio" selected value="allOff">
-    <h2>allOff</h2>
-  </fieldset>
-
-  <fieldset>
-    <input name="animation" type="radio" value="colorFade">
-    <h2>colorFade</h2>
-    <input type="color" name="color1">
-    <input type="color" name="color2">
-  </fieldset>
-
-  <fieldset>
-    <input name="animation" type="radio" value="colorFade">
-    <h2>swipe</h2>
-    <input type="color" name="color1">
-  </fieldset>
-  <button id="send">Enqueue</button>
+<section id="controls-panel">
+  <form id="controls-form">
+    <ul id="controls-list"></ul>
+    <footer>
+      <button id="send">Enqueue</button>
+    </footer>
+  </form>
 </section>
 <script>
   let theForm = {
     init() {
-      this.radios = document.querySelectorAll("[name='animation']");
-      let target = this.radios[0];
-      for (input of this.radios) {
-        input.addEventListener('click', this);
-        if (input.checked) {
-          target = input;
-        }
-      }
-      this.handleSelection({ target });
+      this.form = document.querySelector("#controls-form");
       this.sendButton = document.querySelector("#send");
-      this.sendButton.addEventListener("click", this);
+      this.form.addEventListener("click", this);
+      this.itemRadios = this.form.querySelectorAll("input[name='animation']");
+      this.itemRadios[0].checked = true;
+      this.handleSelection({ target: this.itemRadios[0] });
     },
     handleEvent(evt) {
       switch (evt.type) {
         case 'click': {
-          if (evt.target.type == "radio") {
+          if (evt.target.name == "animation") {
             this.handleSelection(evt);
           }
           if (evt.target == this.sendButton) {
+            evt.preventDefault();
             this.sendForm();
           }
           break;
@@ -103,21 +110,35 @@
       }
     },
     handleSelection(evt) {
-      for(let input of this.radios) {
-        input.parentElement.classList.toggle("selected", input == evt.target);
+      console.log("handleSelection: ", evt);
+      for(let input of this.itemRadios) {
+        let isSelected = input == evt.target;
+        input.closest("li").classList.toggle("selected", isSelected);
       }
     },
     sendForm() {
-      let container = document.querySelector("fieldset.selected");
+      let container = document.querySelector("#controls-list > .selected");
       let inputs = container.querySelectorAll("input");
       let data = {};
       for (let input of inputs) {
-        data[input.name] = input.value;
+        let value;
+        switch (input.name) {
+          case "direction":
+            value = input.checked ? -1 : 1;
+            break;
+          default:
+            value = input.value;
+        }
+        data[input.name] = value;
       }
-      console.log("data: ", data);
+      if (inputController) {
+        console.log("sending request: ", "playanim", data);
+        inputController.handleRequest("playanim", data);
+      } else {
+        console.warn("No inputController to send the data to");
+      }
     }
   };
-  document.addEventListener("DOMContentLoaded", () => { theForm.init() });
 </script>
 <!--
 remote inputs:
@@ -219,11 +240,14 @@ function processInput() {
   if (currentState !== StateEnum.connected) {
     return;
   }
+  if (!inputState.topic) {
+    return;
+  }
   switch (inputState.topic) {
     case "gamestart": {
       let params = new Fx_AnimationParams({r:0,g:0,b:0}, {r:0,g:155,b:255});
       let seq = new Fx_Controller_Clip(
-        animations.colorBlink, // animation
+        Fx_Animations.colorBlink, // animation
         gNowMs,                // startTime
         2000,                  // duration
         0,                     // repeat
@@ -235,7 +259,7 @@ function processInput() {
     case "gameend": {
       let params = new Fx_AnimationParams({r:0,g:155,b:255}, {r:255,g:255,b:0});
       let seq = new Fx_Controller_Clip(
-        animations.colorBlink, // animation
+        Fx_Animations.colorBlink, // animation
         gNowMs,                // startTime
         2000,                  // duration
         0,                     // repeat
@@ -244,6 +268,42 @@ function processInput() {
       fxController.addClip(seq);
       break;
     }
+    case "playanim": {
+      let animName = inputState.params.animation;
+      if (!Fx_Animations[animName]) {
+        console.log("Handling topic playanim, unknown animation: " + animName);
+        return
+      }
+      // convert to numbers treating input as hex
+      let startColorHex = parseInt(inputState.params.startColor.substring(1), 16);
+      let endColorHex = parseInt(inputState.params.endColor.substring(1), 16);
+      // shift over and apply mask to get the bits we need (value of 0-255)
+      let startColor = {
+        r: startColorHex >> 16 & 0xff,
+        g: startColorHex >> 8 & 0xff,
+        b: startColorHex >> 0 & 0xff,
+      };
+      let endColor = {
+        r: endColorHex >> 16 & 0xff,
+        g: endColorHex >> 8 & 0xff,
+        b: endColorHex >> 0 & 0xff,
+      };
+
+      let params = new Fx_AnimationParams(startColor, endColor);
+      console.log("got params: ", params);
+      let seq = new Fx_Controller_Clip(
+        Fx_Animations[animName], // animation
+        gNowMs,                // startTime
+        2000,                  // duration
+        0,                     // repeat
+        params,
+      );
+      fxController.addClip(seq);
+      break;
+    }
+    default:
+      console.log("Unknown topic: " + inputState.topic);
+      break;
   }
   // clear state data once we've handled it
   delete inputState.topic;
@@ -267,16 +327,15 @@ function updateState() {
   // states are predefined macro-level states of being for the whole thing
   // like "starting", "connecting", "connected", "playing", "disconnected"
   // the may utilize the animation engine, or not
-  // console.log("updateState, currentState: ", currentState);
 
-  console.log("updateState, currentState: " + currentState);
+  // console.log("updateState, currentState: " + currentState);
   switch (currentState) {
     case StateEnum.start_state :
       // do something??
       stateTransitionTime = 0;
       previousState = currentState;
       currentState = StateEnum.connecting;
-      console.log("updateState, switching to 'connected' state");
+      console.log("updateState, switching to 'connecting' state");
       break;
     case StateEnum.connecting :
       if (previousState !== currentState) {
@@ -300,7 +359,7 @@ function updateState() {
         currentState = StateEnum.connected;
       } else if (gNowMs >= stateTransitionTime) {
         // continue trying to connect? or do we eventually reset
-        console.log("still connecting...");
+        // console.log("still connecting...");
         stateTransitionTime = gNowMs + 2000;
       }
       break;
@@ -373,6 +432,7 @@ function display() {
 function main() {
   currentState = StateEnum.start_state;
   console.log("preparing strip");
+  prepareControls(Object.values(Fx_Animations));
   prepareStrip();
   console.log("calling setup");
   setup();
@@ -395,6 +455,52 @@ function prepareStrip() {
   }
 }
 
+function prepareControls(animations) {
+  // <li>
+  //   <input name="animation" type="radio" value="colorFade">
+  //   <h2>colorFade</h2>
+  //   <label>startColor: <input type="color" name="startColor"></label>
+  //   <label>startColor: <input type="color" name="endColor"></label>
+  // </li>
+
+  let frag = document.createDocumentFragment();
+  for (let anim of animations) {
+    let group = document.createElement("li");
+    group.id = "control-" + anim.name;
+    let picker = document.createElement("input");
+    picker.name = "animation";
+    picker.type = "radio";
+    picker.value = anim.name;
+    group.appendChild(picker);
+
+    let heading = document.createElement("h2");
+    heading.textContent = anim.name;
+    group.appendChild(heading);
+
+    for (let name of ["startColor", "endColor", "direction"]) {
+      let label = document.createElement("label");
+      label.classList.add("param", "param-"+name);
+      let input = document.createElement("input");
+      input.name = name;
+      if (name.endsWith("Color")) {
+        label.textContent = name + ":";
+        input.type = "color";
+      } else {
+        label.textContent = "backwards:";
+        input.type = "checkbox";
+      }
+      label.appendChild(input);
+      group.appendChild(label);
+    }
+    frag.appendChild(group);
+  }
+  document.querySelector("#controls-list").appendChild(frag);
+  console.log("controls populated");
+  requestAnimationFrame(() => {
+    console.log("rAF, calling form.init()");
+    theForm.init();
+  });
+}
 function setPixelColor(i, r, g, b) {
   let led = document.getElementById("led_" + i);
   led.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;

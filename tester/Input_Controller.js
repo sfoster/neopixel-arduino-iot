@@ -7,7 +7,7 @@ Input_Controller.prototype.start = function() {
   setTimeout(() => {
     console.log("Mock connected event, setting state.connected true");
     this.state.connected = true;
-  }, 5000);
+  }, 1000);
 }
 
 Input_Controller.prototype.handleRequest = function(topic, params) {

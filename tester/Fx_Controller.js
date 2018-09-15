@@ -13,12 +13,16 @@ function Fx_Controller(NUMBER_OF_PIXELS) {
 
 Fx_Controller.prototype.reset = function() {
   this.clips = new Array(Fx_Controller_Clip_Count);
+  for (let i=0; i<Fx_Controller_Clip_Count; i++) {
+    this.clips[i] = null;
+  }
   this.lastClipIndex = -1;
   this.now = null;
   for (let i=0; i<NUM_PIXELS; i++) {
     this.foregroundPixels[i] = {r:0,g:0,b:0};
     this.backgroundPixels[i] = {r:0,g:0,b:0};
   }
+  console.log("Fx_Controller reset, lastClipIndex: ", this.lastClipIndex, this.clips);
 };
 
 Fx_Controller.prototype.start = function() {
@@ -39,32 +43,44 @@ Fx_Controller.prototype.updateTimeline = function() {
   // go over the clips list
   // prune out elapsed clips, re-start repeating clips
   for (let i=0; i<=this.lastClipIndex; i++) {
-    let seq = this.clips[i];
-    let elapsed = now - seq.startTime;
-    if (elapsed >= seq.duration) {
-      seq.repeat--;
-      seq.startTime = now;
+    let clip = this.clips[i];
+    let fillForeground = false;
+    let fillBackground = false;
+    if (!clip) {
+      console.log("updateTimeline: falsey clip at index: ", i, this.clips);
     }
-    if (seq.repeat < 0) {
+    let elapsed = now - clip.startTime;
+    if (elapsed >= clip.duration) {
+      clip.repeat--;
+      clip.startTime = now;
+    }
+    if (clip.repeat < 0) {
+      console.log("updateTimeline: clip with animateFn " + clip.animateFn.name + " is out of repeats, removing it from index: " + i);
       this.removeClipAtIndex(i);
       i--;
+      // reset the buffers to avoid lingering values from removed animation
+      if (clip.isTranslucent) {
+        this._fillForeground(0);
+      } else {
+        this._fillBackground(0);
+      }
       continue;
     }
       // update the tracks with their new values
     let progress = 0;
     if (elapsed > 0) {
-      progress = elapsed / seq.duration;
+      progress = elapsed / clip.duration;
     }
-    if (seq.isTranslucent) {
-      seq.animateFn(progress,
+    if (clip.isTranslucent) {
+      clip.animateFn(progress,
                     this.foregroundPixels,
                     this.NUMBER_OF_PIXELS,
-                    seq.params);
+                    clip.params);
     } else {
-      seq.animateFn(progress,
+      clip.animateFn(progress,
                     this.backgroundPixels,
                     this.NUMBER_OF_PIXELS,
-                    seq.params);
+                    clip.params);
     }
   }
 };
@@ -80,11 +96,31 @@ Fx_Controller.prototype.addClip = function(clip) {
   console.log("addClip: ", this.clips[insertIndex]);
 }
 
-Fx_Controller.prototype.removeClipAtIndex = function(idx) {
-  idx = clamp(idx, 0, Fx_Controller_Clip_Count - 1);
-  this.clips.splice(idx, 1);
-  console.log("removeClipAtIndex result: ", idx, this.clips);
+Fx_Controller.prototype.removeClipAtIndex = function(removeIdx) {
+  removeIdx = clamp(removeIdx, 0, Fx_Controller_Clip_Count - 1);
+  let lastIndex = Fx_Controller_Clip_Count - 1;
+  this.clips[removeIdx] = null;
+  for (let i = removeIdx+1; i <= this.lastClipIndex; i++) {
+    this.clips[i -1] = this.clips[i];
+  }
+  this.lastClipIndex--;
+  console.log("removeClipAtIndex result: ", this.lastClipIndex, this.clips);
 }
+
+Fx_Controller.prototype._fillForeground = function(value = 0) {
+  for(let i=0; i<NUM_PIXELS; i++) {
+    let pixel = fxController.foregroundPixels[i];
+    pixel.r = pixel.g = pixel.b = value;
+  }
+};
+
+Fx_Controller.prototype._fillBackground = function(value = 0) {
+  for(let i=0; i<NUM_PIXELS; i++) {
+    let pixel = fxController.backgroundPixels[i];
+    pixel.r = pixel.g = pixel.b = value;
+  }
+};
+
 
 function Fx_Controller_Clip(animation, startTime, duration, repeat, params) {
   /*
@@ -93,6 +129,7 @@ function Fx_Controller_Clip(animation, startTime, duration, repeat, params) {
     and passes a set of params into that animation on each call
   */
   this.animateFn = animation.animateFn;
+  console.log("Fx_Controller_Clip, got params: ", params);
   // lift up the animation default params to be instance state for this sequence
   this.params = params || deepClone(animation.defaulParams);
   this.duration = duration;
