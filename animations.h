@@ -1,12 +1,12 @@
-void allOff(double progress) {
-  for(int i=0; i<NUM_PIXELS; i++) {
-    pixelColors[i].r = 0;
-    pixelColors[i].g = 0;
-    pixelColors[i].b = 0;
+void allOff(double progress, RBGColor* pixels, int pixelCount) {
+  for(int i=0; i<pixelCount; i++) {
+    pixels[i].r = 0;
+    pixels[i].g = 0;
+    pixels[i].b = 0;
   }
 }
 
-void colorFade(double progress) {
+void colorFade(double progress, RBGColor* pixels, int pixelCount) {
   byte color;
   if (progress <= 0.5) {
     color = progress * 255 * 2;
@@ -18,9 +18,9 @@ void colorFade(double progress) {
   debugPrint(buffer);
 
   for(int i=0; i<NUM_PIXELS; i++) {
-    pixelColors[i].r = 0;
-    pixelColors[i].g = color;
-    pixelColors[i].b = 0;
+    pixels[i].r = 0;
+    pixels[i].g = color;
+    pixels[i].b = 0;
   }
 }
 

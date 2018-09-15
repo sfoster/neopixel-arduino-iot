@@ -17,8 +17,6 @@
   }
 #endif
 
-typedef void (*funcptr)(double);
-
 typedef struct {
   byte r;
   byte g;
@@ -27,6 +25,8 @@ typedef struct {
 
 // allocate an array of rgb structs, one for each pixel
 RBGColor pixelColors[NUM_PIXELS];
+
+typedef void (*funcptr)(double, RBGColor*, int);
 
 enum State {
   start_state,

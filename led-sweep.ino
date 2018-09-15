@@ -1,11 +1,19 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
+#include <ArduinoOTA.h>
+#include <ESP8266WebServer.h>
+
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
   #include <avr/power.h>
 #endif
-  #include "led-sweep.h"
+#include "led-sweep.h"
 #include "animations.h"
 
-#define PIN 5
+const char* ssid = "........";
+const char* password = "........";
+
+#define NEOPIXEL_STRIP_0 5
 
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
@@ -15,12 +23,19 @@
 //   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
 //   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXELS, PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXELS, NEOPIXEL_STRIP_0, NEO_GRB + NEO_KHZ800);
 
 // IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
 // pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
 // and minimize distance between Arduino and first pixel.  Avoid connecting
 // on a live circuit...if you must, connect GND first.
+
+// -------------------------
+
+ESP8266WebServer server(80);
+
+const char* www_username = "admin";
+const char* www_password = "esp8266";
 
 // -------------------------
 
@@ -49,7 +64,7 @@ void updateState() {
       currentState = color_fade_transition;
       break;
     case off_transition :
-      allOff(0.0);
+      allOff(0.0, pixelColors, NUM_PIXELS);
       isAnimating = false;
       currentState = off_state;
       break;
@@ -75,7 +90,7 @@ void updateState() {
       progress = (float)elapsed / (float)animationDuration;
     }
 
-    (*animateFn)(progress);
+    (*animateFn)(progress, pixelColors, NUM_PIXELS);
   }
 }
 
@@ -91,15 +106,57 @@ void setup() {
   strip.begin();
   now = millis();
   // Initialize all pixels to 'off'
-  allOff(0.0);
+  allOff(0.0, pixelColors, NUM_PIXELS);
   display();
+  // could do some wifi-setup sequence here
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  if (WiFi.waitForConnectResult() != WL_CONNECTED) {
+    Serial.println("WiFi Connect Failed! Rebooting...");
+    delay(1000);
+    ESP.restart();
+  }
+  ArduinoOTA.begin();
+  debugPrint(WiFi.localIP().toString());
+  debugPrint("\n");
+
+  // could do some start sequence here
+  //
+
+  server.on("/", []() {
+    server.send(200, "text/plain", "Hello world");
+  });
+
+  server.on("/animation", HTTP_POST, []() {
+    if (server.uri() != "/animation") {
+      return;
+    }
+    //Basic Auth Method with Custom realm and Failure Response
+    //return server.requestAuthentication(BASIC_AUTH, www_realm, authFailResponse);
+    //Digest Auth Method with realm="Login Required" and empty Failure Response
+    //return server.requestAuthentication(DIGEST_AUTH);
+    //Digest Auth Method with Custom realm and empty Failure Response
+    //return server.requestAuthentication(DIGEST_AUTH, www_realm);
+    //Digest Auth Method with Custom realm and Failure Response
+    if (!server.authenticate(www_username, www_password)) {
+      return server.requestAuthentication();
+    }
+    server.send(200, "text/plain", "Done");
+  });
+
+  server.begin();
+
+  Serial.print("Open http://");
+  Serial.print(WiFi.localIP());
+  Serial.println("/ in your browser to see it working");
 
   // todo: initialize the array of rgb values we'll update each frame
-  debugPrint("setup");
+  debugPrint("/setup\n");
 }
 
-
 void loop() {
+  ArduinoOTA.handle();
+  server.handleClient();
   updateState();
   display();
   delay(16); // on esp8266 delay yields
