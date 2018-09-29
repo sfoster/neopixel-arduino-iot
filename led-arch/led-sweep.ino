@@ -1,69 +1,29 @@
-#include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
-#include <ArduinoOTA.h>
-#include <ESP8266WebServer.h>
-
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
   #include <avr/power.h>
 #endif
-#include "led-sweep.h"
-#include "animations.h"
 
-const char* ssid = "........";
-const char* password = "........";
+#include "./config.h"
+#include "./Fx_Types.h"
+#include "./Fx_Controller.cpp"
+#include "./Fx_Animations.cpp"
+#include "./Fx_HttpServer.cpp"
 
-#define NEOPIXEL_STRIP_0 5
-
-// Parameter 1 = number of pixels in strip
-// Parameter 2 = Arduino pin number (most are valid)
-// Parameter 3 = pixel type flags, add together as needed:
-//   NEO_KHZ800  800 KHz bitstream (most NeoPixel products w/WS2812 LEDs)
-//   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
-//   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
-//   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
-//   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXELS, NEOPIXEL_STRIP_0, NEO_GRB + NEO_KHZ800);
-
-// IMPORTANT: To reduce NeoPixel burnout risk, add 1000 uF capacitor across
-// pixel power leads, add 300 - 500 Ohm resistor on first pixel's data input
-// and minimize distance between Arduino and first pixel.  Avoid connecting
-// on a live circuit...if you must, connect GND first.
-
-// -------------------------
-
-ESP8266WebServer server(80);
-
-const char* www_username = "admin";
-const char* www_password = "esp8266";
+Adafruit_NeoPixel neopixels = Adafruit_NeoPixel(NUM_PIXELS, NEOPIXEL_STRIP_0, NEO_GRB + NEO_KHZ800);
 
 // -------------------------
 
 enum State currentState = start_state;
-funcptr animateFn;
-
-// last timestamp
-int previousMillis;
-// timestamp from the start of the current tick
-int now;
-int startTime;
-int animationDuration;
-bool isAnimating = false;
 
 void updateState() {
-  previousMillis = now;
-  now = millis();
-  if (previousMillis > now) {
-    // overflow happened
-    previousMillis = now;
-  }
-
   switch (currentState) {
     case start_state :
-      isAnimating = false;
-      currentState = color_fade_transition;
+      Fx_Controller_Reset();
+      currentState = start_transition;
       break;
     case off_transition :
+      Fx_Controller_Reset();
+      Fx_Controller_AddClip()
       allOff(0.0, pixelColors, NUM_PIXELS);
       isAnimating = false;
       currentState = off_state;
@@ -71,10 +31,7 @@ void updateState() {
     case off_state :
       isAnimating = false;
       break;
-    case color_fade_transition :
-      isAnimating = true;
-      startTime = now;
-      animationDuration = 5000;
+    case start_transition :
       currentState = color_fade_state;
       animateFn = &colorFade;
       debugPrint("color_fade_transition, isAnimating is now true\n");
@@ -96,14 +53,14 @@ void updateState() {
 
 void display() {
   for(int i=0; i<NUM_PIXELS; i++) {
-    strip.setPixelColor(i, pixelColors[i].r, pixelColors[i].g, pixelColors[i].b);
-    strip.show();
+    neopixels.setPixelColor(i, pixelColors[i].r, pixelColors[i].g, pixelColors[i].b);
+    neopixels.show();
   }
 }
 
 void setup() {
   Serial.begin(115200);
-  strip.begin();
+  neopixels.begin();
   now = millis();
   // Initialize all pixels to 'off'
   allOff(0.0, pixelColors, NUM_PIXELS);
