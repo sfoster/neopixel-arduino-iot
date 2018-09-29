@@ -44,6 +44,7 @@ Fx_Controller.prototype.updateTimeline = function() {
   // prune out elapsed clips, re-start repeating clips
   for (let i=0; i<=this.lastClipIndex; i++) {
     let clip = this.clips[i];
+    console.log("updating clip, is isForeground", clip.isForeground);
     let fillForeground = false;
     let fillBackground = false;
     if (!clip) {
@@ -59,7 +60,7 @@ Fx_Controller.prototype.updateTimeline = function() {
       this.removeClipAtIndex(i);
       i--;
       // reset the buffers to avoid lingering values from removed animation
-      if (clip.isTranslucent) {
+      if (clip.isForeground) {
         this._fillForeground(0);
       } else {
         this._fillBackground(0);
@@ -71,7 +72,7 @@ Fx_Controller.prototype.updateTimeline = function() {
     if (elapsed > 0) {
       progress = elapsed / clip.duration;
     }
-    if (clip.isTranslucent) {
+    if (clip.isForeground) {
       clip.animateFn(progress,
                     this.foregroundPixels,
                     this.NUMBER_OF_PIXELS,
@@ -131,7 +132,7 @@ function Fx_Controller_Clip(animation, startTime, duration, repeat, params) {
   this.animateFn = animation.animateFn;
   console.log("Fx_Controller_Clip, got params: ", params);
   // lift up the animation default params to be instance state for this sequence
-  this.params = params || deepClone(animation.defaulParams);
+  this.params = Object.assign({}, animation.defaulParams, params);
   this.duration = duration;
   this.startTime = startTime;
   this.repeat = repeat || 0;

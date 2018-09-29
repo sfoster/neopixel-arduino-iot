@@ -1,7 +1,10 @@
-function Fx_AnimationParams(startColor={r:0,g:0,b:0}, endColor={r:0,g:0,b:0}, initialDirection=1) {
+function Fx_AnimationParams(startColor={r:0,g:0,b:0}, endColor={r:0,g:0,b:0},
+                            initialDirection=1, isForeground=false)
+{
   this.startColor = startColor;
   this.endColor = endColor;
   this.direction = initialDirection;
+  this.isForeground = isForeground;
 }
 const Fx_Animations = {};
 
@@ -56,7 +59,7 @@ function fadeToBlack(progress, pixels, pixelCount, /* AnimationParams */params) 
 }
 Fx_RegisterAnimation("fadeToBlack", fadeToBlack, new Fx_AnimationParams());
 
-function swipe(progress, pixels, pixelCount, /* AnimationParams */params) {
+function bounce(progress, pixels, pixelCount, /* AnimationParams */params) {
   // animate a dot forward then backwards.
   let iterations = 2;
   let brightness = 255;
@@ -68,7 +71,7 @@ function swipe(progress, pixels, pixelCount, /* AnimationParams */params) {
   if (ledToLight > lastIndex) {
     ledToLight = lastIndex - (ledToLight - lastIndex);
   }
-  // console.log(`swipe: progress: ${progress}, position: ${position}, ledToLight: ${ledToLight}`);
+  // console.log(`bounce: progress: ${progress}, position: ${position}, ledToLight: ${ledToLight}`);
   for(let i=0; i<NUM_PIXELS; i++) {
     let distance = Math.abs(ledToLight - i);
     let value;
@@ -85,4 +88,5 @@ function swipe(progress, pixels, pixelCount, /* AnimationParams */params) {
     // pixels[i].b = 0;
   }
 }
-Fx_RegisterAnimation("swipe", swipe, new Fx_AnimationParams());
+// ugh I know, but lets see how this pans out when its ported to c
+Fx_RegisterAnimation("bounce", bounce, new Fx_AnimationParams(undefined, undefined, undefined, true));
