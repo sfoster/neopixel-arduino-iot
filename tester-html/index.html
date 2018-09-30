@@ -11,6 +11,9 @@
     margin: 0;
     font-size: 1em;
   }
+  label {
+    white-space: nowrap;
+  }
   #strip {
     position: absolute;
     top: 400px;
@@ -79,28 +82,46 @@
 
 <section id="controls-panel">
   <form id="controls-form">
-    <ul id="controls-list"></ul>
+    <select id="anim-list"></select>
+    <label>start color:
+      <input type="color" id="startColor">
+    </label>
+    <label>end color:
+      <input type="color" id="endColor">
+    </label>
+    <label>
+      duration (ms)
+      <input type="number" style="width: 4em" id="duration" size=4 min=100 step=100 max=10000>
+    </label>
+    <label>
+      repeat
+      <input type="number" style="width: 4em" id="repeat" min=0>
+    </label>
+    <label>
+      initialDirection
+      <input type="number" style="width: 2em" id="initialDirection" min=-1 max=1>
+    </label>
+    <label>
+      foreground
+      <input type="checkbox" id="isForeground">
+    </label>
+    <ul id="presets">
+    </ul>
     <footer>
       <button id="send">Enqueue</button>
     </footer>
   </form>
 </section>
 <script>
-  let theForm = {
+  const theForm = {
     init() {
       this.form = document.querySelector("#controls-form");
       this.sendButton = document.querySelector("#send");
       this.form.addEventListener("click", this);
-      this.itemRadios = this.form.querySelectorAll("input[name='animation']");
-      this.itemRadios[0].checked = true;
-      this.handleSelection({ target: this.itemRadios[0] });
     },
     handleEvent(evt) {
       switch (evt.type) {
         case 'click': {
-          if (evt.target.name == "animation") {
-            this.handleSelection(evt);
-          }
           if (evt.target == this.sendButton) {
             evt.preventDefault();
             this.sendForm();
@@ -116,29 +137,55 @@
         input.closest("li").classList.toggle("selected", isSelected);
       }
     },
-    sendForm() {
-      let container = document.querySelector("#controls-list > .selected");
-      let inputs = container.querySelectorAll("input");
-      let data = {};
-      for (let input of inputs) {
-        let value;
-        switch (input.name) {
-          case "direction":
-            value = input.checked ? -1 : 1;
-            break;
-          default:
-            value = input.value;
-        }
-        data[input.name] = value;
+    getFormValues() {
+      let form = document.querySelector("#controls-form");
+      let params = {
+        animationName: form.querySelector("#anim-list").selectedOptions[0].value,
+        startColor: form.querySelector("#startColor").value,
+        endColor: form.querySelector("#endColor").value,
+        repeat: form.querySelector("#repeat").value,
+        initialDirection: form.querySelector("#initialDirection").value,
+        duration: form.querySelector("#duration").value,
+        isForeground: form.querySelector("#isForeground").checked,
+      };
+      return params;
+    },
+    setFormValues(params) {
+      console.log("setFormValues: ", params);
+      let form = document.querySelector("#controls-form");
+      let namePicker = form.querySelector("#anim-list");
+      let option = Array.from(namePicker.options).find(o => o.value == params.animationName);
+      if (option) {
+        namePicker.selectedOption = option;
       }
+      form.querySelector("#startColor").value = params.startColor;
+      form.querySelector("#endColor").value = params.endColor;
+      form.querySelector("#repeat").value = params.repeat;
+      form.querySelector("#initialDirection").value = params.initialDirection,
+      form.querySelector("#duration").value = params.duration;
+      form.querySelector("#isForeground").checked = params.isForeground;
+    },
+    sendForm() {
+      let params = this.getFormValues();
+      console.log("Got params: ", params);
       if (inputController) {
-        console.log("sending request: ", "playanim", data);
-        inputController.handleRequest("playanim", data);
+        inputController.handleRequest("playanim", params);
       } else {
         console.warn("No inputController to send the data to");
       }
     }
   };
+
+  const presets = {
+    redBlink: {
+      animationName: 'colorBlink',
+      startColor: '#000000',
+      endColor: '#ff0000',
+      duration: 1000,
+      repeat: 10000,
+      initialDirection: 1,
+    }
+  }
 </script>
 <!--
 remote inputs:

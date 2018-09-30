@@ -1,16 +1,13 @@
+"use strict";
 function Fx_AnimationParams(startColor={r:0,g:0,b:0}, endColor={r:0,g:0,b:0},
                             initialDirection=1, isForeground=false)
 {
   this.startColor = startColor;
   this.endColor = endColor;
-  this.direction = initialDirection;
+  this.initialDirection = initialDirection;
   this.isForeground = isForeground;
 }
 const Fx_Animations = {};
-
-function Fx_RegisterAnimation(name, animateFn, defaultParams={}) {
-  Fx_Animations[name] = { name, animateFn, defaultParams };
-}
 
 // -----------------------------------------------------
 // animations
@@ -22,7 +19,6 @@ function allOff(progress, pixels, pixelCount, /* AnimationParams */params) {
     pixels[i].b = 0;
   }
 }
-Fx_RegisterAnimation("allOff", allOff, new Fx_AnimationParams());
 
 function colorBlink(progress, pixels, pixelCount, /* AnimationParams */params) {
   let pcentOn;
@@ -31,10 +27,8 @@ function colorBlink(progress, pixels, pixelCount, /* AnimationParams */params) {
   let bRange = params.endColor.b - params.startColor.b;
 
   if (progress <= 0.5) {
-    color = progress * 255 * 2;
     pcentOn = progress * 2;
   } else {
-    color = (1 - progress) * 255 * 2;
     pcentOn = (1 - progress) * 2;
   }
   for(let i=0; i<NUM_PIXELS; i++) {
@@ -43,21 +37,24 @@ function colorBlink(progress, pixels, pixelCount, /* AnimationParams */params) {
     pixels[i].b = params.startColor.b  + (bRange * pcentOn);
   }
 }
-Fx_RegisterAnimation("colorBlink", colorBlink, new Fx_AnimationParams());
-Fx_RegisterAnimation("redBlink", colorBlink, new Fx_AnimationParams({r:0,g:0,b:0}, {r:255,g:0,b:0}));
-Fx_RegisterAnimation("blueBlink", colorBlink, new Fx_AnimationParams({r:0,g:0,b:0}, {r:0,g:155,b:255}));
 
-function fadeToBlack(progress, pixels, pixelCount, /* AnimationParams */params) {
+function endWithColor(progress, pixels, pixelCount, /* AnimationParams */params) {
   // progressively turn each pixel black from start to end
   // TODO: could fade in a bit
-  let lastIndex = Math.floor(pixelCount * progress);
-  for(let i=0; i<=lastIndex; i++) {
-    pixels[i].r = 0;
-    pixels[i].g = 0;
-    pixels[i].b = 0;
+  let lastPixelIndex = pixelCount - 1;
+  let ubound = Math.floor(lastPixelIndex * progress);
+  console.log("endColor, got direction: ", params.initialDirection);
+  for(let i=0; i < ubound; i++) {
+    let index = i;
+    if (params.initialDirection < 0) {
+      index = lastPixelIndex - index;
+    }
+    console.assert(pixels[index], "endWithColor tried to write to pixel at i:" + i);
+    pixels[index].r = params.endColor.r;
+    pixels[index].g = params.endColor.g;
+    pixels[index].b = params.endColor.b;
   }
 }
-Fx_RegisterAnimation("fadeToBlack", fadeToBlack, new Fx_AnimationParams());
 
 function bounce(progress, pixels, pixelCount, /* AnimationParams */params) {
   // animate a dot forward then backwards.
@@ -88,5 +85,3 @@ function bounce(progress, pixels, pixelCount, /* AnimationParams */params) {
     // pixels[i].b = 0;
   }
 }
-// ugh I know, but lets see how this pans out when its ported to c
-Fx_RegisterAnimation("bounce", bounce, new Fx_AnimationParams(undefined, undefined, undefined, true));

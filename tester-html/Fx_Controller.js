@@ -44,7 +44,7 @@ Fx_Controller.prototype.updateTimeline = function() {
   // prune out elapsed clips, re-start repeating clips
   for (let i=0; i<=this.lastClipIndex; i++) {
     let clip = this.clips[i];
-    console.log("updating clip, is isForeground", clip.isForeground);
+    // console.log("updating clip, is isForeground", clip.isForeground);
     let fillForeground = false;
     let fillBackground = false;
     if (!clip) {
@@ -129,10 +129,12 @@ function Fx_Controller_Clip(animation, startTime, duration, repeat, params) {
     the clip tracks the number of times it will repeat
     and passes a set of params into that animation on each call
   */
-  this.animateFn = animation.animateFn;
-  console.log("Fx_Controller_Clip, got params: ", params);
+  this.animateFn = animation;
   // lift up the animation default params to be instance state for this sequence
-  this.params = Object.assign({}, animation.defaulParams, params);
+  this.params = new Fx_AnimationParams(params.startColor,
+                                       params.endColor,
+                                       params.initialDirection,
+                                       params.isForeground);
   this.duration = duration;
   this.startTime = startTime;
   this.repeat = repeat || 0;

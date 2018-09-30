@@ -69,7 +69,7 @@ function processInput() {
     case "gamestart": {
       let params = new Fx_AnimationParams({r:0,g:0,b:0}, {r:0,g:155,b:255});
       let seq = new Fx_Controller_Clip(
-        Fx_Animations.colorBlink, // animation
+        colorBlink, // animation
         gNowMs,                // startTime
         2000,                  // duration
         0,                     // repeat
@@ -81,7 +81,7 @@ function processInput() {
     case "gameend": {
       let params = new Fx_AnimationParams({r:0,g:155,b:255}, {r:255,g:255,b:0});
       let seq = new Fx_Controller_Clip(
-        Fx_Animations.colorBlink, // animation
+        colorBlink, // animation
         gNowMs,                // startTime
         2000,                  // duration
         0,                     // repeat
@@ -91,10 +91,10 @@ function processInput() {
       break;
     }
     case "playanim": {
-      let animName = inputState.params.animation;
-      if (!Fx_Animations[animName]) {
-        console.log("Handling topic playanim, unknown animation: " + animName);
-        return
+      let animName = inputState.params.animationName;
+      if (typeof window[animName] !== "function") {
+        console.log("Handling topic playanim, unknown animation: " + animName, typeof window[animName]);
+        return;
       }
       // convert to numbers treating input as hex
       let startColorHex = parseInt(inputState.params.startColor.substring(1), 16);
@@ -111,13 +111,18 @@ function processInput() {
         b: endColorHex >> 0 & 0xff,
       };
 
-      let params = new Fx_AnimationParams(startColor, endColor);
-      console.log("got params: ", params);
+      let duration = parseInt(inputState.params.duration);
+      let repeat = parseInt(inputState.params.repeat || 0);
+
+      let params = new Fx_AnimationParams(startColor, endColor,
+                                          inputState.params.initialDirection,
+                                          inputState.params.duration);
+      console.log("playanim got params: ", params);
       let seq = new Fx_Controller_Clip(
-        Fx_Animations[animName], // animation
+        window[animName], // animation
         gNowMs,                // startTime
-        8000,                  // duration
-        0,                     // repeat
+        duration,                  // duration
+        repeat,                     // repeat
         params,
       );
       fxController.addClip(seq);
@@ -165,7 +170,7 @@ function updateState() {
         // state entry, queue up an animation
         let params = new Fx_AnimationParams({r:0,g:155,b:255}, {r:255,g:255,b:0});
         let clip = new Fx_Controller_Clip(
-          Fx_Animations.blueBlink, // animation
+          colorBlink, // animation
           gNowMs,                  // startTime
           2000,                    // duration
           Infinity,                // repeat
@@ -192,7 +197,7 @@ function updateState() {
 
         let params = new Fx_AnimationParams();
         let clip = new Fx_Controller_Clip(
-          Fx_Animations.fadeToBlack, // animation
+          fadeToBlack, // animation
           gNowMs,                    // startTime
           2000,                      // duration
           0,                         // repeat
@@ -215,7 +220,7 @@ function updateState() {
         fxController.reset();
         let params = new Fx_AnimationParams();
         let clip = new Fx_Controller_Clip(
-          Fx_Animations.bounce,      // animation
+          bounce,      // animation
           gNowMs,                    // startTime
           2000,                      // duration
           Infinity,                  // repeat
@@ -254,7 +259,7 @@ function display() {
 function main() {
   currentState = StateEnum.start_state;
   console.log("preparing strip");
-  prepareControls(Object.values(Fx_Animations));
+  prepareControls();
   prepareStrip();
   console.log("calling setup");
   setup();
@@ -277,47 +282,32 @@ function prepareStrip() {
   }
 }
 
-function prepareControls(animations) {
-
-  // <li>
-  //   <input name="animation" type="radio" value="colorFade">
-  //   <h2>colorFade</h2>
-  //   <label>startColor: <input type="color" name="startColor"></label>
-  //   <label>startColor: <input type="color" name="endColor"></label>
-  // </li>
-
-  let frag = document.createDocumentFragment();
-  for (let anim of animations) {
-    let group = document.createElement("li");
-    group.id = "control-" + anim.name;
-    let picker = document.createElement("input");
-    picker.name = "animation";
-    picker.type = "radio";
-    picker.value = anim.name;
-    group.appendChild(picker);
-
-    let heading = document.createElement("h2");
-    heading.textContent = anim.name;
-    group.appendChild(heading);
-
-    for (let name of ["startColor", "endColor", "direction"]) {
-      let label = document.createElement("label");
-      label.classList.add("param", "param-"+name);
-      let input = document.createElement("input");
-      input.name = name;
-      if (name.endsWith("Color")) {
-        label.textContent = name + ":";
-        input.type = "color";
-      } else {
-        label.textContent = "backwards:";
-        input.type = "checkbox";
-      }
-      label.appendChild(input);
-      group.appendChild(label);
-    }
-    frag.appendChild(group);
+function prepareControls() {
+  let select = document.querySelector("#anim-list");
+  let animations = [
+    "colorBlink",
+    "endWithColor",
+    "bounce",
+    "allOff"
+  ];
+  for (let name of animations) {
+    let option = document.createElement("option");
+    option.value = option.textContent = name;
+    select.appendChild(option);
   }
-  document.querySelector("#controls-list").appendChild(frag);
+  let presetsContainer = document.querySelector("#presets");
+  for (let [name, params] of Object.entries(presets)) {
+    let item = document.createElement("li");
+    let button = document.createElement("input");
+    button.type = "button";
+    button.textContent = button.value = name;
+    item.appendChild(button);
+    item.addEventListener("click", () => {
+      theForm.setFormValues(params);
+    });
+    presetsContainer.appendChild(item);
+  }
+
   console.log("controls populated");
   requestAnimationFrame(() => {
     console.log("rAF, calling form.init()");
