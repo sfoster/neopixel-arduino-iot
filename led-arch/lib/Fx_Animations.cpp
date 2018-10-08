@@ -9,8 +9,8 @@
 //  with the r,g,b values for each pixel
 
 void colorBlink(float progress, RGBColor* pixels, int pixelCount, Fx_AnimationParams *params) {
+  // debugPrint("colorBlink got progress: %.2f\n", progress);
   float pcentOn;
-  debugPrint("colorBlink got progress: %.2f\n", progress);
   int rRange = params->endColor.r - params->startColor.r;
   int gRange = params->endColor.g - params->startColor.g;
   int bRange = params->endColor.b - params->startColor.b;
@@ -30,7 +30,7 @@ void colorBlink(float progress, RGBColor* pixels, int pixelCount, Fx_AnimationPa
 }
 
 void allOff(float progress, RGBColor* pixels, int pixelCount, Fx_AnimationParams *params) {
-  debugPrint("allOff got progress: %.2f", progress);
+  debugPrint("allOff got progress: %.2f\n", progress);
   for(int i=0; i<pixelCount; i++) {
     pixels[i].r = 0;
     pixels[i].g = 0;
@@ -39,7 +39,7 @@ void allOff(float progress, RGBColor* pixels, int pixelCount, Fx_AnimationParams
 }
 
 void endWithColor(float progress, RGBColor* pixels, int pixelCount, Fx_AnimationParams *params) {
-  debugPrint("endWithColor got progress: %.2f", progress);
+  debugPrint("endWithColor got progress: %.2f\n", progress);
   // progressively turn each pixel e.g. black from start to end
   // TODO: could fade in a bit
   unsigned int lastIndex = (pixelCount * progress);
@@ -82,27 +82,4 @@ void bounce(float progress, RGBColor* pixels, int pixelCount, Fx_AnimationParams
   }
   debugPrint("\n");
 }
-
-// ------------------------
-// Some pre-defined animation params
-
-Fx_AnimationParams defaultParams = {{0, 0, 0},
-                                    {0, 0, 0},
-                                    1,
-                                    false};
-
-Fx_AnimationParams toBlueParams =  {{0, 0, 0},
-                                    {0, 0, 255},
-                                    1,
-                                    false};
-
-Fx_AnimationParams toRedParams =   {{0, 0, 0},
-                                    {255, 0, 0},
-                                    1,
-                                    false};
-
-Fx_AnimationParams toGreenParams = {{0, 0, 0},
-                                    {0, 255, 0},
-                                    1,
-                                    false};
 

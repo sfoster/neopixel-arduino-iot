@@ -4,56 +4,34 @@
 #endif
 
 #include "./config.h"
-#include "./Fx_Types.h"
-#include "./Fx_Controller.cpp"
-#include "./Fx_Animations.cpp"
-#include "./Fx_HttpServer.cpp"
+#include "lib/Fx_Types.h"
+#include "lib/Fx_Helpers.h"
+
+#include "lib/Fx_Animations.cpp"
+#include "lib/Fx_Controller.cpp"
+#include "lib/Fx_HttpServer.cpp"
+#include "lib/Fx_AppStates.cpp"
 
 Adafruit_NeoPixel neopixels = Adafruit_NeoPixel(NUM_PIXELS, NEOPIXEL_STRIP_0, NEO_GRB + NEO_KHZ800);
 
 // -------------------------
 
-enum State currentState = start_state;
-
-void updateState() {
-  switch (currentState) {
-    case start_state :
-      Fx_Controller_Reset();
-      currentState = start_transition;
-      break;
-    case off_transition :
-      Fx_Controller_Reset();
-      Fx_Controller_AddClip()
-      allOff(0.0, pixelColors, NUM_PIXELS);
-      isAnimating = false;
-      currentState = off_state;
-      break;
-    case off_state :
-      isAnimating = false;
-      break;
-    case start_transition :
-      currentState = color_fade_state;
-      animateFn = &colorFade;
-      debugPrint("color_fade_transition, isAnimating is now true\n");
-  }
-  if (isAnimating) {
-    int elapsed = clamp(now - startTime, 0, animationDuration);
-    if (elapsed >= animationDuration) {
-      currentState = off_transition;
-      return;
-    }
-    double progress = 0.0;
-    if (elapsed > 0) {
-      progress = (float)elapsed / (float)animationDuration;
-    }
-
-    (*animateFn)(progress, pixelColors, NUM_PIXELS);
-  }
-}
 
 void display() {
-  for(int i=0; i<NUM_PIXELS; i++) {
-    neopixels.setPixelColor(i, pixelColors[i].r, pixelColors[i].g, pixelColors[i].b);
+  for(unsigned int i=0; i<NUM_PIXELS; i++) {
+    byte r = clamp(
+      fxController.backgroundPixels[i].r + fxController.foregroundPixels[i].r,
+      0, 255
+    );
+    byte g = clamp(
+      fxController.backgroundPixels[i].g + fxController.foregroundPixels[i].g,
+      0, 255
+    );
+    byte b = clamp(
+      fxController.backgroundPixels[i].b + fxController.foregroundPixels[i].b,
+      0, 255
+    );
+    neopixels.setPixelColor(i, r, g, b);
     neopixels.show();
   }
 }
@@ -61,11 +39,12 @@ void display() {
 void setup() {
   Serial.begin(115200);
   neopixels.begin();
-  now = millis();
-  // Initialize all pixels to 'off'
-  allOff(0.0, pixelColors, NUM_PIXELS);
-  display();
-  // could do some wifi-setup sequence here
+
+  Fx_Controller_Init();
+
+  // prepare wifi-setup sequence here
+  nextState = Connecting;
+
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   if (WiFi.waitForConnectResult() != WL_CONNECTED) {
@@ -74,48 +53,29 @@ void setup() {
     ESP.restart();
   }
   ArduinoOTA.begin();
-  debugPrint(WiFi.localIP().toString());
+  String ip = WiFi.localIP().toString();
+  char ipChars[256];
+  strcpy(ipChars, ip.c_str());
+  debugPrint(ipChars);
   debugPrint("\n");
 
-  // could do some start sequence here
-  //
-
-  server.on("/", []() {
-    server.send(200, "text/plain", "Hello world");
-  });
-
-  server.on("/animation", HTTP_POST, []() {
-    if (server.uri() != "/animation") {
-      return;
-    }
-    //Basic Auth Method with Custom realm and Failure Response
-    //return server.requestAuthentication(BASIC_AUTH, www_realm, authFailResponse);
-    //Digest Auth Method with realm="Login Required" and empty Failure Response
-    //return server.requestAuthentication(DIGEST_AUTH);
-    //Digest Auth Method with Custom realm and empty Failure Response
-    //return server.requestAuthentication(DIGEST_AUTH, www_realm);
-    //Digest Auth Method with Custom realm and Failure Response
-    if (!server.authenticate(www_username, www_password)) {
-      return server.requestAuthentication();
-    }
-    server.send(200, "text/plain", "Done");
-  });
-
-  server.begin();
+  // start sequence here
+  Fx_HttpServer_init();
 
   Serial.print("Open http://");
   Serial.print(WiFi.localIP());
   Serial.println("/ in your browser to see it working");
 
-  // todo: initialize the array of rgb values we'll update each frame
+  nextState = Running;
   debugPrint("/setup\n");
 }
 
 void loop() {
   ArduinoOTA.handle();
   server.handleClient();
-  updateState();
+
+  Fx_updateState();
+  Fx_Controller_updateTimeline(millis());
   display();
   delay(16); // on esp8266 delay yields
 }
-

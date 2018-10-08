@@ -65,6 +65,7 @@ function processInput() {
   if (!inputState.topic) {
     return;
   }
+
   switch (inputState.topic) {
     case "gamestart": {
       let params = new Fx_AnimationParams({r:0,g:0,b:0}, {r:0,g:155,b:255});
@@ -88,6 +89,12 @@ function processInput() {
         params,
       );
       fxController.addClip(seq);
+      break;
+    }
+    // reset, restart, flush, startover, starting
+    case "starting": {
+      fxController.reset();
+
       break;
     }
     case "playanim": {

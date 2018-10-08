@@ -48,7 +48,6 @@ typedef struct {
 
 typedef void (*AnimateFnPointer)(float progress, RGBColor* pixels, int pixelCount, Fx_AnimationParams *params);
 
-//
 typedef struct {
   AnimateFnPointer animateFn;
   bool isForeground;
@@ -75,7 +74,7 @@ typedef struct {
   RGBColor foregroundPixels[NUM_PIXELS];
   RGBColor backgroundPixels[NUM_PIXELS];
 
-  // clips is an array of pointers to the Fx_Controller_Clip-s
+  // clips is an array of pointers to Fx_Controller_Clip-s
   Fx_Controller_Clip *clips[MAX_FX_CLIPS];
 } Fx_Controller;
 
@@ -86,4 +85,23 @@ enum State {
   color_fade_transition,
   color_fade_state
 };
+
+enum InputTopic {
+  topic_game_start,
+  topic_connecting,
+  topic_connectionfail,
+  topic_connected,
+  topic_disconnected,
+  topic_game_end,
+  topic_reset,
+  topic_playanim
+};
+
+typedef struct {
+  Fx_Controller_Clip clipParam;
+  char detailsMessage[255];
+  enum InputTopic topic;
+} RunState;
+
+
 #endif

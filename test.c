@@ -1,14 +1,43 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "./led-arch/config.h"
 #include "./led-arch/lib/Fx_Types.h"
 #include "./led-arch/lib/Fx_Helpers.h"
 
-#include "./led-arch/lib/Fx_Controller.cpp"
 #include "./led-arch/lib/Fx_Animations.cpp"
+#include "./led-arch/lib/Fx_Controller.cpp"
+#include "./led-arch/lib/Fx_AppStates.cpp"
 
+RunState inputState;
+
+// =========================================================
+
+int parseLine(char* line){
+    // This assumes that a digit will be found and the line ends in " Kb".
+    int i = strlen(line);
+    const char* p = line;
+    while (*p <'0' || *p > '9') p++;
+    line[i-3] = '\0';
+    i = atoi(p);
+    return i;
+}
+void printMemoryused(){ //Note: this value is in KB!
+    FILE* file = fopen("/proc/self/status", "r");
+    int result = -1;
+    char line[128];
+
+    while (fgets(line, 128, file) != NULL){
+        if (strncmp(line, "VmRSS:", 6) == 0){
+            result = parseLine(line);
+            break;
+        }
+    }
+    fclose(file);
+    debugPrint("Memory used: %d\n", result);
+}
 // =========================================================
 
 void sigint_handler(int sig) {
@@ -16,46 +45,96 @@ void sigint_handler(int sig) {
   exit(0);
 }
 
-void incrementStartR(Fx_AnimationParams *params)
-{
-  debugPrint("incrementStartR, got startColor.r: %d\n", params->startColor.r);
-  params->startColor.r++;
-  debugPrint("incrementStartR, now startColor.r: %d\n", params->startColor.r);
-}
 
-void decrementRepeat(Fx_Controller_Clip *clip)
-{
-  debugPrint("decrementRepeat, got repeat: %ld\n", clip->repeat);
-  clip->repeat--;
-  debugPrint("decrementRepeat, now repeat: %ld\n", clip->repeat);
+void setup() {
+  delay(123);
+  Fx_Controller_Init();
+
+  colorBlink(0.00, fxController.foregroundPixels, NUM_PIXELS, &toBlueParams);
+  colorBlink(0.10, fxController.foregroundPixels, NUM_PIXELS, &toBlueParams);
+
+  nextState = Connecting;
+  int frameItv;
+  for (frameItv = 0; frameItv < 10; frameItv++) {
+    Fx_updateState();
+    Fx_Controller_updateTimeline(millis());
+    debugPrint("setup: at now: %ld, pixel.rgb: %d,%d,%d\n", now_ms,
+               fxController.backgroundPixels[6].r, fxController.backgroundPixels[6].g, fxController.backgroundPixels[6].b);
+    delay(100);
+  }
+  nextState = Running;
 }
 
 int main(void) {
-
-  // starting at time = 0 will never happen and complicates things!
-  delay(123);
   debugPrint("Starting main\n");
+  printMemoryused();
   signal(SIGINT, sigint_handler);
 
-  Fx_Controller_Init();
-  Fx_Define_Clips();
+  setup();
+  debugPrint("/setup\n");
+  printMemoryused();
+  delay(123);
 
-  Fx_Controller_Clip repeating_clip = blinkRed_clip;
-  repeating_clip.repeat = LONG_MAX;
-  Fx_Controller_AddClip(&repeating_clip);
+  Fx_Controller_AddClip(&colorBlink, false, 1000UL, LONG_MAX, toRedParams);
+  Fx_Controller_AddClip(&colorBlink, true, 1000UL, LONG_MAX, toBlueParams);
 
-  Fx_Controller_Clip short_clip = blinkBlue_clip;
-  short_clip.repeat = 0;
-  Fx_Controller_AddClip(&short_clip);
-
-  // debugPrint("main: blinkRed_clip repeat: %ld\n", blinkRed_clip.repeat);
-  // debugPrint("main: new_clip repeat: %ld\n", new_clip.repeat);
-  // debugPrint("main: new_clip duration: %ld\n", new_clip.duration);
-
-  for (int itv = 0; itv < 200; itv++) {
+  // // process input
+  int frameItv;
+  for (frameItv = 0; frameItv < 10; frameItv++) {
+    Fx_updateState();
     Fx_Controller_updateTimeline(millis());
-    debugPrint("main: pixel.r: %d\n", fxController.foregroundPixels[6].r);
-    delay(16);
+    debugPrint("main: pixel.rgb: %d,%d,%d\n",
+               fxController.backgroundPixels[6].r, fxController.backgroundPixels[6].g, fxController.backgroundPixels[6].b);
+    delay(100);
   }
+  printMemoryused();
+
+  while(1) {
+    Fx_updateState();
+
+    // enqueue a dimming animation
+    Fx_Controller_AddClip(
+      &endWithColor, false, 1000UL, 0, toBlackParams);
+
+    Fx_Controller_updateTimeline(millis());
+    debugPrint("main: pixel.rgb: %d,%d,%d\n",
+               fxController.backgroundPixels[6].r, fxController.backgroundPixels[6].g, fxController.backgroundPixels[6].b);
+    delay(100);
+
+    Fx_updateState();
+    Fx_Controller_updateTimeline(millis());
+    debugPrint("main: pixel.rgb: %d,%d,%d\n",
+               fxController.backgroundPixels[6].r, fxController.backgroundPixels[6].g, fxController.backgroundPixels[6].b);
+    delay(100);
+
+    Fx_updateState();
+    Fx_Controller_AddClip(
+      &colorBlink, false, 1000UL, INFINITE_REPEATS, toBlueParams);
+    Fx_Controller_updateTimeline(millis());
+    debugPrint("main: pixel.rgb: %d,%d,%d\n",
+               fxController.backgroundPixels[6].r, fxController.backgroundPixels[6].g, fxController.backgroundPixels[6].b);
+    delay(100);
+    printMemoryused();
+  }
+  // switch (inputState.topic) {
+  //   case topic_game_start:
+  //     debugPrint("Current topic: topic_game_start\n");
+  //     break;
+  //   default:
+  //     debugPrint("What inputState.topic is this?\n");
+  // }
+
+  // RGBColor color;
+  // color = hexColorStringToRGBStruct("#606060");
+  // debugPrint("%s becomes: r: %d, g: %d, b: %d\n", "#606060", color.r, color.g, color.b);
+
+  // color = hexColorStringToRGBStruct("#ff0000");
+  // debugPrint("%s becomes: r: %d, g: %d, b: %d\n", "#ff0000", color.r, color.g, color.b);
+
+  // color = hexColorStringToRGBStruct("#FfCcAa");
+  // debugPrint("%s becomes: r: %d, g: %d, b: %d\n", "#FfCcAa", color.r, color.g, color.b);
+
+  // color = hexColorStringToRGBStruct("#aa5567");
+  // debugPrint("%s becomes: r: %d, g: %d, b: %d\n", "#aa5567", color.r, color.g, color.b);
   return 0;
 }
