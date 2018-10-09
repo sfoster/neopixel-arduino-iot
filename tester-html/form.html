@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style type="text/css">
+  body {
+    margin: 0;
+    padding: 4px;
+    background-color: #ddd;
+  }
+  form {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-gap: 8px;
+    grid-auto-rows: minmax(2.5em, auto);
+  }
+  label {
+    white-space: nowrap;
+    display: contents;
+  }
+  input[type=text], input[type=url], input[type=email], input[type=password], input[type=tel] {
+    -webkit-appearance: none; -moz-appearance: none;
+    display: block;
+    margin: 0;
+    width: 100%;
+    line-height: 40px;
+    border: 1px solid;
+  }
+  select[name="animationName"],
+  button[type="submit"] {
+    display: block;
+    grid-column: 1 / 5;
+  }
+  button[type="submit"] {
+    background-color: #ffa;
+  }
+</style>
+</head>
+<body>
+  <form method="POST" action="http://172.16.10.42/animation">
+    <select name="animationName">
+      <option value="colorBlink">colorBlink</option>
+      <option value="endWithColor">endWithColor</option>
+      <option value="bounce">bounce</option>
+      <option value="explode">explode</option>
+    </select>
+    <label>start color:
+      <input type="color" name="startColor">
+    </label>
+    <label>end color:
+      <input type="color" name="endColor">
+    </label>
+    <label>
+      duration (ms)
+      <input type="number" style="width: 4em" name="duration" size=4 min=100 step=100 max=10000 value=1000>
+    </label>
+    <label>
+      repeat
+      <input type="number" style="width: 4em" name="repeat" min=0 value=0>
+    </label>
+    <label>
+      <span>initialDirection:</span>
+      <select style="width: 5em" name="initialDirection">
+        <option value="1">Fwd</option>
+        <option value="-1">Back</option>
+      </select>
+    </label>
+    <label>
+      foreground:
+      <span><input type="checkbox" name="isForeground"></span>
+    </label>
+    <button type="submit" id="upload">Upload</button>
+    <ul id="presets">
+    </ul>
+  </form>
+</body>
+</html>
