@@ -46,7 +46,7 @@ typedef struct {
   bool isForeground;
 } Fx_AnimationParams;
 
-typedef void (*AnimateFnPointer)(float progress, RGBColor* pixels, int pixelCount, Fx_AnimationParams *params);
+typedef void (*AnimateFnPointer)(float progress, RGBColor* pixels, unsigned short pixelCount, Fx_AnimationParams *params);
 
 typedef struct {
   AnimateFnPointer animateFn;
@@ -61,7 +61,7 @@ typedef struct {
 
 typedef struct {
   // could be more than 256
-  unsigned int pixelCount;
+  unsigned short pixelCount;
   // unlikely to be more than 128
   char clipCount;
   // initial value is -1

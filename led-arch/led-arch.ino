@@ -13,12 +13,13 @@
 #include "lib/Fx_AppStates.cpp"
 
 Adafruit_NeoPixel neopixels = Adafruit_NeoPixel(NUM_PIXELS, NEOPIXEL_STRIP_0, NEO_GRB + NEO_KHZ800);
-
+String rxCommand;
+String IpAddress;
 // -------------------------
 
 
 void display() {
-  for(unsigned int i=0; i<NUM_PIXELS; i++) {
+  for(unsigned short i=0; i<NUM_PIXELS; i++) {
     byte r = clamp(
       fxController.backgroundPixels[i].r + fxController.foregroundPixels[i].r,
       0, 255
@@ -53,9 +54,9 @@ void setup() {
     ESP.restart();
   }
   ArduinoOTA.begin();
-  String ip = WiFi.localIP().toString();
-  char ipChars[256];
-  strcpy(ipChars, ip.c_str());
+  IpAddress = WiFi.localIP().toString();
+  char ipChars[32];
+  strcpy(ipChars, IpAddress.c_str());
   debugPrint(ipChars);
   debugPrint("\n");
 
@@ -68,11 +69,23 @@ void setup() {
 
   nextState = Running;
   debugPrint("/setup\n");
+  Serial.flush();
 }
 
 void loop() {
   ArduinoOTA.handle();
   server.handleClient();
+
+  if (Serial.available() > 0) {
+    // read the incoming byte:
+    rxCommand = Serial.readString();
+    Serial.flush();
+    // if (rxCommand == "?") {
+      Serial.print("IP Address: ");
+      Serial.print(IpAddress);
+      Serial.println("");
+    // }
+  }
 
   Fx_updateState();
   Fx_Controller_updateTimeline(millis());

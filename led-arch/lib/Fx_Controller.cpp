@@ -138,6 +138,9 @@ void Fx_Controller_AddClip(AnimateFnPointer animateFn,
 }
 
 void Fx_Controller_RemoveClipAtIndex(byte removeIdx) {
+  // clips is a fixed-length array,
+  // so memory is not freed when removing a clip, we just move the lastClipIndex
+  // to allow it to be reused
   removeIdx = clamp(removeIdx, 0, fxController.clipCount - 1);
   for (byte i = removeIdx+1; i <= fxController.lastClipIndex; i++) {
     fxController.clips[i -1] = fxController.clips[i];
@@ -147,14 +150,14 @@ void Fx_Controller_RemoveClipAtIndex(byte removeIdx) {
 }
 
 void Fx_Controller_FillForeground(byte value) {
-  for(unsigned int i=0; i<fxController.pixelCount; i++) {
+  for(unsigned short i=0; i<fxController.pixelCount; i++) {
     RGBColor pixel = fxController.foregroundPixels[i];
     pixel.r = pixel.g = pixel.b = value;
   }
 }
 
 void Fx_Controller_FillBackground(byte value) {
-  for(unsigned int i=0; i<fxController.pixelCount; i++) {
+  for(unsigned short i=0; i<fxController.pixelCount; i++) {
     RGBColor pixel = fxController.backgroundPixels[i];
     pixel.r = pixel.g = pixel.b = value;
   }

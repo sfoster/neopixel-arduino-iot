@@ -7,13 +7,13 @@
 // -----------------------------------------
 // Declare Animation functions
 
-void colorBlink(float progress, RGBColor* pixels, int pixelCount, Fx_AnimationParams *params);
+void colorBlink(float progress, RGBColor* pixels, unsigned short pixelCount, Fx_AnimationParams *params);
 
-void allOff(float progress, RGBColor* pixels, int pixelCount, Fx_AnimationParams *params);
+void allOff(float progress, RGBColor* pixels, unsigned short pixelCount, Fx_AnimationParams *params);
 
-void endWithColor(float progress, RGBColor* pixels, int pixelCount, Fx_AnimationParams *params);
+void endWithColor(float progress, RGBColor* pixels, unsigned short pixelCount, Fx_AnimationParams *params);
 
-void bounce(float progress, RGBColor* pixels, int pixelCount, Fx_AnimationParams *params);
+void bounce(float progress, RGBColor* pixels, unsigned short pixelCount, Fx_AnimationParams *params);
 
 // ------------------------
 // Define some pre-defined colors
