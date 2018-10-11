@@ -17,10 +17,10 @@ void Fx_Controller_AddClip(AnimateFnPointer animateFn,
                      long repeat,
                      Fx_AnimationParams params);
 
-void Fx_Controller_RemoveClipAtIndex(byte removeIdx);
+void Fx_Controller_RemoveClipAtIndex(unsigned char removeIdx);
 
-void Fx_Controller_FillForeground(byte value);
+void Fx_Controller_FillForeground(unsigned char value);
 
-void Fx_Controller_FillBackground(byte value);
+void Fx_Controller_FillBackground(unsigned char value);
 
 #endif

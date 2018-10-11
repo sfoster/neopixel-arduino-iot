@@ -1,45 +1,97 @@
-#include <math.h>
+#include "Fx_Types.h"
 
-typedef struct {
-    double r;       // ∈ [0, 1]
-    double g;       // ∈ [0, 1]
-    double b;       // ∈ [0, 1]
-} rgb;
-
-typedef struct {
-    double h;       // ∈ [0, 360]
-    double s;       // ∈ [0, 1]
-    double v;       // ∈ [0, 1]
-} hsv;
-
-rgb hsv2rgb(hsv HSV)
+RGBColor HsvToRgb(HSVColor hsv)
 {
-    rgb RGB;
-    double H = HSV.h, S = HSV.s, V = HSV.v,
-            P, Q, T,
-            fract;
+    RGBColor rgb;
+    unsigned char region, p, q, t;
+    unsigned int h, s, v, remainder;
 
-    (H == 360.)?(H = 0.):(H /= 60.);
-    fract = H - floor(H);
+    if (hsv.s == 0)
+    {
+        rgb.r = hsv.v;
+        rgb.g = hsv.v;
+        rgb.b = hsv.v;
+        return rgb;
+    }
 
-    P = V*(1. - S);
-    Q = V*(1. - S*fract);
-    T = V*(1. - S*(1. - fract));
+    // converting to 16 bit to prevent overflow
+    h = hsv.h;
+    s = hsv.s;
+    v = hsv.v;
 
-    if      (0. <= H && H < 1.)
-        RGB = (rgb){.r = V, .g = T, .b = P};
-    else if (1. <= H && H < 2.)
-        RGB = (rgb){.r = Q, .g = V, .b = P};
-    else if (2. <= H && H < 3.)
-        RGB = (rgb){.r = P, .g = V, .b = T};
-    else if (3. <= H && H < 4.)
-        RGB = (rgb){.r = P, .g = Q, .b = V};
-    else if (4. <= H && H < 5.)
-        RGB = (rgb){.r = T, .g = P, .b = V};
-    else if (5. <= H && H < 6.)
-        RGB = (rgb){.r = V, .g = P, .b = Q};
+    region = h / 43;
+    remainder = (h - (region * 43)) * 6;
+
+    p = (v * (255 - s)) >> 8;
+    q = (v * (255 - ((s * remainder) >> 8))) >> 8;
+    t = (v * (255 - ((s * (255 - remainder)) >> 8))) >> 8;
+
+    switch (region)
+    {
+        case 0:
+            rgb.r = v;
+            rgb.g = t;
+            rgb.b = p;
+            break;
+        case 1:
+            rgb.r = q;
+            rgb.g = v;
+            rgb.b = p;
+            break;
+        case 2:
+            rgb.r = p;
+            rgb.g = v;
+            rgb.b = t;
+            break;
+        case 3:
+            rgb.r = p;
+            rgb.g = q;
+            rgb.b = v;
+            break;
+        case 4:
+            rgb.r = t;
+            rgb.g = p;
+            rgb.b = v;
+            break;
+        default:
+            rgb.r = v;
+            rgb.g = p;
+            rgb.b = q;
+            break;
+    }
+
+    return rgb;
+}
+
+HSVColor RgbToHsv(RGBColor rgb)
+{
+    HSVColor hsv;
+    unsigned char rgbMin, rgbMax;
+
+    rgbMin = rgb.r < rgb.g ? (rgb.r < rgb.b ? rgb.r : rgb.b) : (rgb.g < rgb.b ? rgb.g : rgb.b);
+    rgbMax = rgb.r > rgb.g ? (rgb.r > rgb.b ? rgb.r : rgb.b) : (rgb.g > rgb.b ? rgb.g : rgb.b);
+
+    hsv.v = rgbMax;
+    if (hsv.v == 0)
+    {
+        hsv.h = 0;
+        hsv.s = 0;
+        return hsv;
+    }
+
+    hsv.s = 255 * ((long)(rgbMax - rgbMin)) / hsv.v;
+    if (hsv.s == 0)
+    {
+        hsv.h = 0;
+        return hsv;
+    }
+
+    if (rgbMax == rgb.r)
+        hsv.h = 0 + 43 * (rgb.g - rgb.b) / (rgbMax - rgbMin);
+    else if (rgbMax == rgb.g)
+        hsv.h = 85 + 43 * (rgb.b - rgb.r) / (rgbMax - rgbMin);
     else
-        RGB = (rgb){.r = 0., .g = 0., .b = 0.};
+        hsv.h = 171 + 43 * (rgb.r - rgb.g) / (rgbMax - rgbMin);
 
-    return RGB;
+    return hsv;
 }

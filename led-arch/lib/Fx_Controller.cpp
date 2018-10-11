@@ -41,7 +41,7 @@ void Fx_Controller_updateTimeline(unsigned long now) {
 
   // go over the clips list
   // prune out elapsed clips, re-start repeating clips
-  for (byte i=0; i<=fxController.lastClipIndex; i++) {
+  for (unsigned char i=0; i<=fxController.lastClipIndex; i++) {
     Fx_Controller_Clip *clip = fxController.clips[i];
     unsigned long elapsed = fxController.now - clip->startTime;
 
@@ -112,7 +112,7 @@ void Fx_Controller_AddClip(AnimateFnPointer animateFn,
                      Fx_AnimationParams params) {
 
   debugPrint("Fx_Controller_AddClip, lastClipIndex: %d\n", fxController.lastClipIndex);
-  byte insertIndex = 1 + fxController.lastClipIndex;
+  unsigned char insertIndex = 1 + fxController.lastClipIndex;
   if (insertIndex >= fxController.clipCount) {
     // if we filled the array of clips, just replace the last one
     insertIndex = fxController.lastClipIndex;
@@ -137,26 +137,26 @@ void Fx_Controller_AddClip(AnimateFnPointer animateFn,
       fxController.clips[insertIndex]->repeat);
 }
 
-void Fx_Controller_RemoveClipAtIndex(byte removeIdx) {
+void Fx_Controller_RemoveClipAtIndex(unsigned char removeIdx) {
   // clips is a fixed-length array,
   // so memory is not freed when removing a clip, we just move the lastClipIndex
   // to allow it to be reused
   removeIdx = clamp(removeIdx, 0, fxController.clipCount - 1);
-  for (byte i = removeIdx+1; i <= fxController.lastClipIndex; i++) {
+  for (unsigned char i = removeIdx+1; i <= fxController.lastClipIndex; i++) {
     fxController.clips[i -1] = fxController.clips[i];
   }
   fxController.lastClipIndex--;
   debugPrint("removeClipAtIndex remove from: %d, lastClipIndex: %d\n", removeIdx, fxController.lastClipIndex);
 }
 
-void Fx_Controller_FillForeground(byte value) {
+void Fx_Controller_FillForeground(unsigned char value) {
   for(unsigned short i=0; i<fxController.pixelCount; i++) {
     RGBColor pixel = fxController.foregroundPixels[i];
     pixel.r = pixel.g = pixel.b = value;
   }
 }
 
-void Fx_Controller_FillBackground(byte value) {
+void Fx_Controller_FillBackground(unsigned char value) {
   for(unsigned short i=0; i<fxController.pixelCount; i++) {
     RGBColor pixel = fxController.backgroundPixels[i];
     pixel.r = pixel.g = pixel.b = value;

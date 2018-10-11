@@ -20,15 +20,15 @@ String IpAddress;
 
 void display() {
   for(unsigned short i=0; i<NUM_PIXELS; i++) {
-    byte r = clamp(
+    unsigned char r = clamp(
       fxController.backgroundPixels[i].r + fxController.foregroundPixels[i].r,
       0, 255
     );
-    byte g = clamp(
+    unsigned char g = clamp(
       fxController.backgroundPixels[i].g + fxController.foregroundPixels[i].g,
       0, 255
     );
-    byte b = clamp(
+    unsigned char b = clamp(
       fxController.backgroundPixels[i].b + fxController.foregroundPixels[i].b,
       0, 255
     );

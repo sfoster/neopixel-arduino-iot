@@ -73,9 +73,9 @@ RGBColor hexColorStringToRGBStruct(char* hexStr) {
   // A:65 -> F:70
   // a:97 -> f:102
   RGBColor color;
-  color.r = ((byte)asciiToInt(hexStr[1]) << 4) + asciiToInt(hexStr[2]);
-  color.g = ((byte)asciiToInt(hexStr[3]) << 4) + asciiToInt(hexStr[4]);
-  color.b = ((byte)asciiToInt(hexStr[5]) << 4) + asciiToInt(hexStr[6]);
+  color.r = ((unsigned char)asciiToInt(hexStr[1]) << 4) + asciiToInt(hexStr[2]);
+  color.g = ((unsigned char)asciiToInt(hexStr[3]) << 4) + asciiToInt(hexStr[4]);
+  color.b = ((unsigned char)asciiToInt(hexStr[5]) << 4) + asciiToInt(hexStr[6]);
   return color;
 }
 

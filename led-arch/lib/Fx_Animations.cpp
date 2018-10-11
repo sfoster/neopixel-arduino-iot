@@ -51,7 +51,7 @@ void endWithColor(float progress, RGBColor* pixels, unsigned short pixelCount, F
 
 void bounce(float progress, RGBColor* pixels, unsigned short pixelCount, Fx_AnimationParams *params) {
   // animate a dot forward then backwards.
-  byte iterations = 2;
+  unsigned char iterations = 2;
   unsigned short lastIndex = pixelCount - 1;
   // get a position into the total length (iterations * number of pixels)
   unsigned short position = (float)lastIndex * (float)iterations * progress;
