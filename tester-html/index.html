@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"><head>
+<meta charset="UTF-8">
 <style>
   body {
     background-color: #000;
@@ -81,7 +81,7 @@
 <body>
 
 <section id="controls-panel">
-  <form id="controls-form">
+  <form id="controls-form" method="POST">
     <select id="anim-list"></select>
     <label>start color:
       <input type="color" id="startColor">
@@ -105,18 +105,29 @@
       foreground
       <input type="checkbox" id="isForeground">
     </label>
+    <label>
+      esp8266 IP
+      <input type="text" id="espHost" value="127.0.0.1">
+    </label>
     <ul id="presets">
     </ul>
     <footer>
       <button id="send">Enqueue</button>
+      <button id="upload">Upload</button>
+      <button id="reset">Reset</button>
     </footer>
   </form>
 </section>
 <script>
+  const USERNAME = "admin";
+  const PASSWORD = "esp8266";
+
   const theForm = {
     init() {
       this.form = document.querySelector("#controls-form");
       this.sendButton = document.querySelector("#send");
+      this.uploadButton = document.querySelector("#upload");
+      this.resetButton = document.querySelector("#reset");
       this.form.addEventListener("click", this);
     },
     handleEvent(evt) {
@@ -124,7 +135,15 @@
         case 'click': {
           if (evt.target == this.sendButton) {
             evt.preventDefault();
+            this.previewForm();
+          }
+          if (evt.target == this.uploadButton) {
+            evt.preventDefault();
             this.sendForm();
+          }
+          if (evt.target == this.resetButton) {
+            evt.preventDefault();
+            this.sendReset();
           }
           break;
         }
@@ -165,13 +184,67 @@
       form.querySelector("#duration").value = params.duration;
       form.querySelector("#isForeground").checked = params.isForeground;
     },
-    sendForm() {
+    previewForm() {
       let params = this.getFormValues();
       console.log("Got params: ", params);
       if (inputController) {
         inputController.handleRequest("playanim", params);
       } else {
         console.warn("No inputController to send the data to");
+      }
+    },
+    _getRequestHeaders() {
+      let headers = new Headers({
+        "Authorization": "Basic " + btoa(USERNAME + ":" + PASSWORD),
+        "Content-Type":  "application/x-www-form-urlencoded",
+        "Access-Control-Request-Headers": "Authorization, Content-Type"
+      });
+      console.log("sendForm with headers: ", headers.get('Authorization'));
+      return headers;
+    },
+    sendReset() {
+      let host = document.querySelector("#espHost").value;
+      let pairs = ["animationName=reset"];
+      let postBody = pairs.join("&");
+      let headers = this._getRequestHeaders();
+      let request = new Request(`http://${host}/reset`);
+      let args = {
+        method: 'POST',
+        headers,
+        body: postBody,
+        mode: 'no-cors',
+      };
+      console.log("sendForm with form values: ", postBody);
+      window.fetch(request, args).then(rawResponse => {
+        console.info("POST success: ", rawResponse);
+      }).catch(err => {
+        console.warn("POST failure: ", err);
+      });
+    },
+    sendForm() {
+
+      let params = this.getFormValues();
+      let host = document.querySelector("#espHost").value;
+      let pairs = [];
+      for(let [name, value] of Object.entries(params)) {
+        pairs.push(name + '=' + encodeURIComponent(value));
+      }
+      let postBody = pairs.join("&");
+      let headers = this._getRequestHeaders();
+      let request = new Request(`http://${host}/animation`);
+      let args = {
+        method: 'POST',
+        headers,
+        body: postBody,
+        mode: 'no-cors',
+      };
+      console.log("sendForm with form values: ", postBody);
+      if (1) {
+        window.fetch(request, args).then(rawResponse => {
+          console.info("POST success: ", rawResponse);
+        }).catch(err => {
+          console.warn("POST failure: ", err);
+        });
       }
     }
   };
@@ -223,6 +296,7 @@ output system
 
 <div id="strip"></div>
 <script type="text/javascript" src="./tester.js"></script>
+<script type="text/javascript" src="./hsv.js"></script>
 <script type="text/javascript" src="./Fx_Controller.js"></script>
 <script type="text/javascript" src="./Input_Controller.js"></script>
 <script type="text/javascript" src="./Fx_Animations.js"></script>

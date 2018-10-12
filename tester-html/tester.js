@@ -295,6 +295,8 @@ function prepareControls() {
     "colorBlink",
     "endWithColor",
     "bounce",
+    "rainbow",
+    "explode",
     "allOff"
   ];
   for (let name of animations) {

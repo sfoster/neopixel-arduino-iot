@@ -85,3 +85,57 @@ function bounce(progress, pixels, pixelCount, /* AnimationParams */params) {
     // pixels[i].b = 0;
   }
 }
+
+function rainbow(progress, pixels, pixelCount, params) {
+  // ignore startColor, endColor we'll do red, orange, yellow, green, blue, indigo and violet
+  let startHSV = { h: 0, s: 255, v: 255 };
+  let endHSV = { h: 360, s: 255, v: 255 };
+  for(let i=0; i<NUM_PIXELS; i++) {
+    let rgb = hsv2rgb({
+      h: endHSV.h * progress,
+      s: startHSV.s,
+      v: startHSV.v
+    });
+    pixels[i].r = rgb.r;
+    pixels[i].g = rgb.g;
+    pixels[i].b = rgb.b;
+  }
+}
+
+function explode(progress, pixels, pixelCount, /* AnimationParams */params) {
+  // WIP: Doesnt do owt yet.
+  // build a blob in the middle of the string, and decay out as particles to the edges
+  // e.g. 5s, grow for 2s, move out as particles for 2s, fade for 1s
+  // animation is symmetrical, we'll calculate one side and just mirror it for the other
+
+  let halfLength = pixelCount / 2;
+  // how many points to distribute along the length of the string
+  let pointRatio = 1/10;
+  let allPointsLen = Math.floor(halfLength * pointRatio);
+  let points = new Array(allPointsLen);
+  let centerLeft = pixelCount % 2 ? Math.floor(halfLength) : Math.floor(halfLength) -1;
+  let centerRight = pixelCount % 2 ? Math.floor(halfLength) -1 : Math.floor(halfLength);
+
+  for(let i=0; i<pixelCount; i++) {
+    let distanceToPoint = halfLength;
+    let brightness = 0;
+    let pointPosition;
+    let distanceFromCenter = 0;
+    for(let j=1; j<=allPointsLen; j++) {
+      distanceFromCenter = Math.floor(halfLength * progress / j);
+      if (i <= centerLeft) {
+        pointPosition = centerLeft - distanceFromCenter;
+        distanceToPoint = Math.min(distanceToPoint, Math.abs(i - pointPosition));
+      } else {
+        pointPosition = centerRight + distanceFromCenter;
+        distanceToPoint = Math.min(distanceToPoint, Math.abs(i - pointPosition));
+      }
+    }
+    if (distanceToPoint < halfLength * pointRatio) {
+      brightness = 255 - Math.min(255, distanceToPoint * distanceToPoint);
+    }
+    pixels[i].r = brightness;
+    pixels[i].g = brightness;
+    pixels[i].b = brightness;
+  }
+}
