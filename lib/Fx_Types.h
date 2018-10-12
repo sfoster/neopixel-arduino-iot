@@ -5,10 +5,6 @@
 static const long INFINITE_REPEATS = LONG_MAX;
 #define ZERO_MS 0
 
-// listed as built-in type for arduino?
-// https://www.arduino.cc/reference/en/language/variables/data-types/byte
-typedef unsigned char byte;
-
 #ifndef ARDUINO
 #define true 1
 #define false 0
@@ -86,14 +82,7 @@ typedef struct {
   Fx_Controller_Clip *clips[MAX_FX_CLIPS];
 } Fx_Controller;
 
-enum State {
-  start_state,
-  off_transition,
-  off_state,
-  color_fade_transition,
-  color_fade_state
-};
-
+#if 0
 enum InputTopic {
   topic_game_start,
   topic_connecting,
@@ -104,12 +93,14 @@ enum InputTopic {
   topic_reset,
   topic_playanim
 };
+#endif
 
+#if 0
 typedef struct {
   Fx_Controller_Clip clipParam;
   char detailsMessage[255];
   enum InputTopic topic;
 } RunState;
-
+#endif
 
 #endif

@@ -28,11 +28,6 @@ static const RGBColor Pink = { 255, 154, 154 };
 // ------------------------
 // Declare pre-defined animation params
 
-Fx_AnimationParams defaultParams = {{0, 0, 0},
-                                    {0, 0, 0},
-                                    1,
-                                    false};
-
 Fx_AnimationParams toBlueParams =  {{0, 0, 0},
                                     {0, 0, 255},
                                     1,

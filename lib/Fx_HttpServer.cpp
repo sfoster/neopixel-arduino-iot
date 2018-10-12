@@ -13,9 +13,6 @@ void Fx_HttpServer_handleResetPost() {
   Fx_Controller_FillBackground(0);
 }
 
-void Fx_Controller_FillBackground(unsigned char value) {
-}
-
 void Fx_HttpServer_handleAnimationPost() {
   // Enqueue an animation
   char nameBuf[80];
