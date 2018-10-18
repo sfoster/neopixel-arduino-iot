@@ -29,19 +29,11 @@ void delay(unsigned long ms) {
 // unused?
 typedef char Fx_Name[64];
 
-typedef struct RGBColor
-{
+typedef struct {
   unsigned char r;
   unsigned char g;
   unsigned char b;
 } RGBColor;
-
-typedef struct HSVColor
-{
-  unsigned char h;
-  unsigned char s;
-  unsigned char v;
-} HSVColor;
 
 typedef struct {
   RGBColor startColor;

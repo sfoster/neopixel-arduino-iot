@@ -1,60 +1,103 @@
 #include <FastLED.h>
-#define NUM_LEDS 150
+#include <Wire.h>
+#include "lib/I2C_Anything.h";
+
+#define NUM_LEDS 7
 #define DATA_PIN 5
-#define TWO_HUNDRED_PI 628
-#define TWO_THIRDS_PI 2.094
+#define ANNOUNCE_PIN 0
+
+#define BRIGHTNESS          96
+#define FRAMES_PER_SECOND  120
+
+bool gotMessage;
+unsigned long receivedTime;
 
 CRGB leds[NUM_LEDS];
-unsigned int lastIndex;
-unsigned char val;
-unsigned long startTime;
-unsigned long duration = 8000;
-unsigned long elapsed;
-unsigned long now;
-unsigned long previousMillis;
-// repeat can go to -1 so needs to be signed
-long repeat;
+CHSV currentHSV;
+byte currentBrightness;
+char direction;
+// uint8_t gHue = 0; // rotating "base color" used by many of the patterns
+
+// function that executes whenever data is received from master
+// this function is registered as an event, see setup()
+void receiveEvent(int howMany) {
+  Serial.print("receiveEvent: ");
+  Serial.println(howMany);
+
+  if (howMany >= sizeof(CHSV))
+  {
+     I2C_readAnything (currentHSV);
+     gotMessage = true;
+  }  // end if have enough data
+
+  // while (1 < Wire.available()) { // loop through all but the last
+  //   char c = Wire.read(); // receive byte as a character
+  //   Serial.print(c);         // print the character
+  // }
+  // int x = Wire.read();    // receive byte as an integer
+  // Serial.println(x);         // print the integer
+}
 
 void setup() {
+  receivedTime = millis();
+
   Serial.begin(9600);
-  Serial.print("F_CPU: ");
-  Serial.println(F_CPU);
+  Serial.print("BRIGHTNESS: ");
+  Serial.println(BRIGHTNESS);
 
-  lastIndex = NUM_LEDS -1 -(NUM_LEDS % 3);
+  pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
+
+  Wire.begin(8);                // join i2c bus with address #8
+  Wire.onReceive(receiveEvent); // register event
+
+  delay(3000); // 3 second delay for recovery
+
   FastLED.addLeds<WS2812B, DATA_PIN, RGB>(leds, NUM_LEDS);
-  startTime = previousMillis = millis();
+
+  // set master brightness control
+  FastLED.setBrightness(204);
+  currentBrightness = BRIGHTNESS;
+  direction = 1;
+  currentHSV = CHSV(HUE_RED, 255, 204);
+  Serial.print("setup currentHSV.v:");
+  Serial.println(currentHSV.v);
 }
+
+void addGlitter( fract8 chanceOfGlitter)
+{
+  if( random8() < chanceOfGlitter) {
+    leds[ random16(NUM_LEDS) ] += CRGB::White;
+  }
+}
+
 void loop() {
-  now = millis();
-  if ((previousMillis > now) ||
-      previousMillis == 0) {
-    // first update, or maybe overflow happened
-    previousMillis = now;
-  }
-  unsigned long elapsed = now - startTime;
-  if (elapsed >= (unsigned long)duration) {
-    startTime = now;
-    elapsed = elapsed % duration;
-  }
-  float progress = 0.0;
-  if (elapsed > 0) {
-    progress = (float)elapsed / (float)duration;
+  if (gotMessage) {
+    Serial.print("Got new color:");
+    Serial.print(currentHSV.h);
+    Serial.print(",");
+    Serial.print(currentHSV.s);
+    Serial.print(",");
+    Serial.print(currentHSV.v);
+    Serial.println(";");
+    gotMessage = false;
   }
 
-  if (progress <= 0.5) {
-    val = (unsigned char)(progress * 180.0 * 2);
-  } else {
-    val = (unsigned char)((1 - progress) * 180.0 * 2);
+  for(int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = currentHSV;
   }
-  Serial.print("progress:");
-  Serial.print(progress);
-  Serial.print(", val:");
-  Serial.print(val);
-  Serial.println("");
+  // addGlitter(80);
+  //fill_rainbow( leds, NUM_LEDS, gHue, 7);
 
-  for(int i=0; i<NUM_LEDS; i++) {
-    leds[i] = CHSV(180+val, 255, 204);
-  }
+  // send the 'leds' array out to the actual LED strip
   FastLED.show();
-  delay(1);
+  // insert a delay to keep the framerate modest
+  FastLED.delay(1000/FRAMES_PER_SECOND);
+  // do some periodic updates
+  // EVERY_N_MILLISECONDS( 32 ) { }
+  // fade up and down
+  // if (currentBrightness <= 100 || currentBrightness >= 255) {
+  //   direction *= -1;
+  // }
+  // currentBrightness += direction;
+  // currentHSV.v = currentBrightness;
 }

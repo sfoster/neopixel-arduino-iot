@@ -10,8 +10,8 @@ void Fx_updateState() {
         debugPrint("Going to Off state\n");
 
         // enqueue a dimming animation
-        Fx_Controller_AddClip(
-          &endWithColor, false, 1000UL, 0, toBlackParams);
+        // Fx_Controller_AddClip(
+        //   &endWithColor, false, 1000UL, 0, toBlackParams);
       }
       currentState = nextState;
       break;
@@ -19,18 +19,18 @@ void Fx_updateState() {
       if (nextState != currentState) {
         debugPrint("Going to Connecting state\n");
         // enqueue a connecting animation
-        Fx_Controller_Reset();
-        Fx_Controller_AddClip(
-          &colorBlink, false, 1000UL, INFINITE_REPEATS, toBlueParams);
+        // Fx_Controller_Reset();
+        // Fx_Controller_AddClip(
+        //   &colorBlink, false, 1000UL, INFINITE_REPEATS, toBlueParams);
       }
       currentState = nextState;
       break;
     case Running:
       if (nextState != currentState) {
         debugPrint("Going to Running state\n");
-        Fx_Controller_Reset();
-        Fx_Controller_AddClip(
-          &colorBlink, false, 1000UL, INFINITE_REPEATS, toGreenParams);
+        // Fx_Controller_Reset();
+        // Fx_Controller_AddClip(
+        //   &colorBlink, false, 1000UL, INFINITE_REPEATS, toGreenParams);
       }
       currentState = nextState;
       break;

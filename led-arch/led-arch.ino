@@ -1,23 +1,31 @@
-#include <Adafruit_NeoPixel.h>
-#ifdef __AVR__
-  #include <avr/power.h>
-#endif
-
 #include "./config.h"
+
+#include <Wire.h>
 #include "lib/Fx_Types.h"
 #include "lib/Fx_Helpers.h"
+#include "lib/I2C_Anything.h";
 
-#include "lib/Fx_Animations.cpp"
-#include "lib/Fx_Controller.cpp"
+// include "lib/Fx_Animations.cpp"
+// include "lib/Fx_Controller.cpp"
 #include "lib/Fx_HttpServer.cpp"
 #include "lib/Fx_AppStates.cpp"
 
-Adafruit_NeoPixel neopixels = Adafruit_NeoPixel(NUM_PIXELS, NEOPIXEL_STRIP_0, NEO_GRB + NEO_KHZ800);
-String rxCommand;
+#define SDA_PIN 4
+#define SCL_PIN 5
+
+typedef struct CHSV {
+  unsigned char h;
+  unsigned char s;
+  unsigned char v;
+} CHSV;
+
 String IpAddress;
+byte colorIndex = 0;
+CHSV currentPalette[16];
 // -------------------------
 
 
+#if 0
 void display() {
   for(unsigned short i=0; i<NUM_PIXELS; i++) {
     unsigned char r = clamp(
@@ -36,12 +44,30 @@ void display() {
     neopixels.show();
   }
 }
+#endif
+
+void sendMessage(CHSV color) {
+  Wire.beginTransmission(8); // transmit to device #8
+  // Wire.write ((byte *) &response, sizeof response);
+  I2C_writeAnything(color);
+  // Wire.write("content is "); // sends five bytes
+  // Wire.write(content);       // sends one byte
+  Wire.endTransmission();    // stop transmitting
+
+  Serial.print("Sent color: ");
+  Serial.print(color.h);
+  Serial.print(",");
+  Serial.print(color.s);
+  Serial.print(",");
+  Serial.print(color.v);
+  Serial.println(";");
+}
 
 void setup() {
-  Serial.begin(115200);
-  neopixels.begin();
+  pinMode(LED_BUILTIN, OUTPUT); // Initialize the LED_BUILTIN pin as an output
 
-  Fx_Controller_Init();
+  Wire.begin(SDA_PIN, SCL_PIN);// join i2c bus (address optional for master)
+  Serial.begin(115200);
 
   // prepare wifi-setup sequence here
   nextState = Connecting;
@@ -69,26 +95,37 @@ void setup() {
 
   nextState = Running;
   debugPrint("/setup\n");
+
+  // fill the palette with totally random colors.
+  // void SetupTotallyRandomPalette() {
+  for( int i = 0; i < 16; i++) {
+    currentPalette[i] = { .h = (unsigned char)(rand()%256),
+                          .s = 255,
+                          .v = (unsigned char)(rand()%256)
+                        };
+  }
   Serial.flush();
 }
+
+bool lightOn;
 
 void loop() {
   ArduinoOTA.handle();
   server.handleClient();
 
-  if (Serial.available() > 0) {
-    // read the incoming byte:
-    rxCommand = Serial.readString();
-    Serial.flush();
-    // if (rxCommand == "?") {
-      Serial.print("IP Address: ");
-      Serial.print(IpAddress);
-      Serial.println("");
-    // }
+  if (++colorIndex >= 16) {
+    colorIndex = 0;
   }
+  sendMessage(currentPalette[colorIndex]);
 
   Fx_updateState();
-  Fx_Controller_updateTimeline(millis());
-  display();
-  delay(16); // on esp8266 delay yields
+  // Fx_Controller_updateTimeline(millis());
+  // display();
+  digitalWrite(LED_BUILTIN, lightOn);
+  if (lightOn) {
+    lightOn = false;
+  } else  {
+    lightOn = true;
+  }
+  delay(2000); // on esp8266 delay yields
 }

@@ -8,9 +8,7 @@
 ESP8266WebServer server(80);
 
 void Fx_HttpServer_handleResetPost() {
-  Fx_Controller_Reset();
-  Fx_Controller_FillForeground(0);
-  Fx_Controller_FillBackground(0);
+  debugPrint("Got reset POST\n");
 }
 
 void Fx_HttpServer_handleAnimationPost() {
@@ -18,22 +16,22 @@ void Fx_HttpServer_handleAnimationPost() {
   char nameBuf[80];
   String nameString = server.arg("animationName");
   nameString.toCharArray(nameBuf, 80);
-  AnimateFnPointer animateFn;
+  // AnimateFnPointer animateFn;
 
-  if (nameString == "allOff") {
-    animateFn = &allOff;
-  } else if (nameString == "colorBlink") {
-    animateFn = &colorBlink;
-  } else if (nameString == "endWithColor") {
-    animateFn = &endWithColor;
-  } else if (nameString == "bounce") {
-    animateFn = &bounce;
-  } else {
-    debugPrint("Unknown animation function: %s", nameBuf);
-    return;
-  }
+  // if (nameString == "allOff") {
+  //   animateFn = &allOff;
+  // } else if (nameString == "colorBlink") {
+  //   animateFn = &colorBlink;
+  // } else if (nameString == "endWithColor") {
+  //   animateFn = &endWithColor;
+  // } else if (nameString == "bounce") {
+  //   animateFn = &bounce;
+  // } else {
+  //   debugPrint("Unknown animation function: %s", nameBuf);
+  //   return;
+  // }
 
-  debugPrint("Handling POST to /animation, creating clip with %s", nameBuf);
+  // debugPrint("Handling POST to /animation, creating clip with %s", nameBuf);
 
   long duration = (long)server.arg("duration").toInt();
 
@@ -61,7 +59,8 @@ void Fx_HttpServer_handleAnimationPost() {
   params.initialDirection = initialDirection;
   params.isForeground = isForeground;
 
-  Fx_Controller_AddClip(animateFn, isForeground, duration, repeat, params);
+  debugPrint("Prepared params %d, %d, %d\n", params.startColor.r, params.startColor.g, params.startColor.b);
+  // Fx_Controller_AddClip(animateFn, isForeground, duration, repeat, params);
 }
 
 void Fx_HttpServer_init() {
