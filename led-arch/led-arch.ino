@@ -54,7 +54,7 @@ void sendMessage(CHSV color) {
   // Wire.write(content);       // sends one byte
   Wire.endTransmission();    // stop transmitting
 
-  Serial.print("Sent color: ");
+  Serial.print("Sent clip: ");
   Serial.print(color.h);
   Serial.print(",");
   Serial.print(color.s);

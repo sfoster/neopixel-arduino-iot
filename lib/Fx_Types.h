@@ -11,7 +11,7 @@ static const long INFINITE_REPEATS = LONG_MAX;
 
 typedef int bool;
 
-unsigned long now_ms = ZERO_MS;
+unsigned long now_ms;
 
 unsigned long millis() {
   return now_ms;
@@ -21,7 +21,6 @@ void delay(unsigned long ms) {
   now_ms += ms;
   usleep((int)ms * 1000);
 }
-
 #endif
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))

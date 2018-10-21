@@ -1,11 +1,18 @@
 #include <FastLED.h>
+#include <Wire.h>
+#include "lib/I2C_Anything.h"
 #include "./config.h"
-#include "./fastled-test.h"
+#include "./fastled-i2c.h"
 #include <limits.h>
 
 #define DATA_PIN 5
+#define ANNOUNCE_PIN 0
+
 #define BRIGHTNESS          96
 #define FRAMES_PER_SECOND  120
+
+bool gotMessage;
+unsigned long receivedTime;
 
 CRGB pixels[NUM_PIXELS];
 
@@ -14,10 +21,31 @@ Anim_Clip currentLoop;
 Anim_Clip* clip;
 unsigned long now;
 
+// function that executes whenever data is received from master
+// this function is registered as an event, see setup()
+void receiveEvent(int howMany) {
+  Serial.print("receiveEvent: ");
+  Serial.println(howMany);
+
+  if (howMany >= sizeof(Anim_Clip))
+  {
+     I2C_readAnything (currentClip);
+     gotMessage = true;
+  }  // end if have enough data
+
+}
+
 void setup() {
+  receivedTime = millis();
+
   Serial.begin(9600);
 
   pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
+
+  Wire.begin(8);                // join i2c bus with address #8
+  Wire.onReceive(receiveEvent); // register event
+
+  delay(3000); // 3 second delay for recovery
 
   FastLED.addLeds<WS2812B, NEOPIXEL_DATA_A, RGB>(pixels, NUM_PIXELS);
 
@@ -85,8 +113,35 @@ float getClipProgress(Anim_Clip* clip, unsigned long now) {
   return progress;
 }
 
+void dumpCurrentClip() {
+    Serial.print("currentClip, anim: ");
+    Serial.print(currentClip.anim);
+    Serial.print(": ");
+    Serial.print(currentClip.startColor.h);
+    Serial.print(",");
+    Serial.print(currentClip.startColor.s);
+    Serial.print(",");
+    Serial.println(currentClip.startColor.v);
+    Serial.print(" - ");
+    Serial.print(currentClip.endColor.h);
+    Serial.print(",");
+    Serial.print(currentClip.endColor.s);
+    Serial.print(",");
+    Serial.println(currentClip.endColor.v);
+
+    Serial.print("duration: ");
+    Serial.print(currentClip.duration);
+    Serial.print(", repeat: ");
+    Serial.print(currentClip.repeat);
+    Serial.println(";");
+}
+
 void loop() {
   now = millis();
+  if (gotMessage) {
+    dumpCurrentClip();
+    gotMessage = false;
+  }
 
   if (currentLoop.anim != None) {
     currentLoop.repeat = SHRT_MAX;
