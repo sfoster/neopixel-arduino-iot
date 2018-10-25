@@ -1,6 +1,6 @@
 #include <FastLED.h>
 #include "./config.h"
-#include "./fastled-test.h"
+#include "lib/Fx_Helpers.h"
 #include <limits.h>
 
 #define DATA_PIN 5
@@ -110,15 +110,15 @@ void loop() {
     } break;
     case Blink: {
       float progress = getClipProgress(clip, now);
-      blink(progress, NUM_PIXELS, clip);
+      blink(progress, pixels, NUM_PIXELS, clip);
     } break;
     case Pulse: {
       float progress = getClipProgress(clip, now);
-      colorPulse(progress, NUM_PIXELS, clip);
+      colorPulse(progress, pixels, NUM_PIXELS, clip);
     } break;
     case Race: {
       float progress = getClipProgress(clip, now);
-      race(progress, NUM_PIXELS, clip);
+      race(progress, pixels, NUM_PIXELS, clip);
     } break;
     default: {
       Serial.println("No animation matched");

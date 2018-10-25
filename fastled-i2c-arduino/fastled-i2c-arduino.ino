@@ -1,8 +1,9 @@
+#include "./config.h"
 #include <FastLED.h>
 #include <Wire.h>
 #include "lib/I2C_Anything.h"
-#include "./config.h"
-#include "./fastled-i2c.h"
+#include "lib/Fx_Helpers.h"
+#include "lib/Fx_Animations.h"
 #include <limits.h>
 
 #define DATA_PIN 5
@@ -24,12 +25,9 @@ unsigned long now;
 // function that executes whenever data is received from master
 // this function is registered as an event, see setup()
 void receiveEvent(int howMany) {
-  Serial.print("receiveEvent: ");
-  Serial.println(howMany);
-
   if (howMany >= sizeof(Anim_Clip))
   {
-     I2C_readAnything (currentClip);
+     I2C_readAnything(currentClip);
      gotMessage = true;
   }  // end if have enough data
 
@@ -42,8 +40,8 @@ void setup() {
 
   pinMode(LED_BUILTIN, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
 
-  Wire.begin(8);                // join i2c bus with address #8
-  Wire.onReceive(receiveEvent); // register event
+  Wire.begin(I2C_LOCAL_ADDRESS);    // join i2c bus at given address
+  Wire.onReceive(receiveEvent);     // register event
 
   delay(3000); // 3 second delay for recovery
 
@@ -62,14 +60,14 @@ void setup() {
   currentClip.anim = Pulse;
   currentClip.startColor = { .h = 0, .s = 255, .v = 255 };
   currentClip.endColor = { .h = 160, .s = 255, .v = 51 };
-  currentClip.duration = 2000;
   currentClip.initialDirection = -1;
+  currentClip.duration = 2000;
   currentClip.repeat = 15;
   currentClip.startTime = millis();
 
-  currentLoop.anim = Blink;
+  currentLoop.anim = Race;
   currentLoop.startColor = { .h = 0, .s = 255, .v = 255 };
-  currentLoop.endColor = { .h = 160, .s = 255, .v = 51 };
+  currentLoop.endColor = { .h = 160, .s = 255, .v = 204 };
   currentLoop.duration = 1000;
   currentLoop.initialDirection = -1;
   currentLoop.repeat = SHRT_MAX;
@@ -113,33 +111,12 @@ float getClipProgress(Anim_Clip* clip, unsigned long now) {
   return progress;
 }
 
-void dumpCurrentClip() {
-    Serial.print("currentClip, anim: ");
-    Serial.print(currentClip.anim);
-    Serial.print(": ");
-    Serial.print(currentClip.startColor.h);
-    Serial.print(",");
-    Serial.print(currentClip.startColor.s);
-    Serial.print(",");
-    Serial.println(currentClip.startColor.v);
-    Serial.print(" - ");
-    Serial.print(currentClip.endColor.h);
-    Serial.print(",");
-    Serial.print(currentClip.endColor.s);
-    Serial.print(",");
-    Serial.println(currentClip.endColor.v);
-
-    Serial.print("duration: ");
-    Serial.print(currentClip.duration);
-    Serial.print(", repeat: ");
-    Serial.print(currentClip.repeat);
-    Serial.println(";");
-}
-
 void loop() {
   now = millis();
   if (gotMessage) {
-    dumpCurrentClip();
+    Serial.print("Got message of size:");
+    Serial.print(sizeof(currentClip));
+    dumpClip(&currentClip);
     gotMessage = false;
   }
 
@@ -158,26 +135,32 @@ void loop() {
     clip = &currentLoop;
   }
 
-  switch (clip->anim) {
-    case AllOff: {
-      Serial.println("AllOff animation");
-      memset8( pixels, 0, NUM_PIXELS * sizeof(CRGB));
-    } break;
-    case Blink: {
-      float progress = getClipProgress(clip, now);
-      blink(progress, NUM_PIXELS, clip);
-    } break;
-    case Pulse: {
-      float progress = getClipProgress(clip, now);
-      colorPulse(progress, NUM_PIXELS, clip);
-    } break;
-    case Race: {
-      float progress = getClipProgress(clip, now);
-      race(progress, NUM_PIXELS, clip);
-    } break;
-    default: {
-      Serial.println("No animation matched");
+  if (clip->anim == AllOff) {
+    Serial.println("AllOff animation");
+    memset8( pixels, 0, NUM_PIXELS * sizeof(CRGB));
+  } else {
+    float progress = getClipProgress(clip, now);
+
+    if (progress < 0.1) {
+      digitalWrite(LED_BUILTIN, 1);
+    } else {
+      digitalWrite(LED_BUILTIN, 0);
     }
+    switch (clip->anim) {
+      case Blink: {
+        blink(progress, pixels, NUM_PIXELS, clip);
+      } break;
+      case Pulse: {
+        colorPulse(progress, pixels, NUM_PIXELS, clip);
+      } break;
+      case Race: {
+        race(progress, pixels, NUM_PIXELS, clip);
+      } break;
+      default: {
+        Serial.println("No animation matched");
+      }
+    }
+    // dumpColor(pixels[0]);
   }
   // send the 'pixels' array out to the actual LED strip
   FastLED.show();
@@ -187,69 +170,3 @@ void loop() {
   // EVERY_N_MILLISECONDS( 32 ) { }
 }
 
-void blink(float progress, unsigned short pixelCount, Anim_Clip *clip) {
-  CHSV color = { .hue=HUE_ORANGE, .sat=255, .val=255 };
-  if (now % 1000 > 500) {
-    color.hue = HUE_YELLOW;
-  }
-  for(int i = 0; i < pixelCount; i++) {
-    pixels[i] = color;
-  }
-  // addGlitter(8);
-}
-
-void colorPulse(float progress, unsigned short pixelCount, Anim_Clip *clip) {
-  // debugPrint("colorBlink got progress: %.2f\n", progress);
-  float pcentOn;
-  short valRange = clip->endColor.val - clip->startColor.val;
-  CHSV newColor;
-
-  if (progress <= 0.5f) {
-    pcentOn = progress * 2.0f;
-  } else {
-    pcentOn = (1 - progress) * 2.0f;
-  }
-  newColor.val = clip->startColor.val  + (valRange * pcentOn);
-  for(unsigned short i=0; i<NUM_PIXELS; i++) {
-    pixels[i] = newColor;
-    // debugPrint("%d: %d,%d,%d; ", i, pixels[i].r, pixels[i].g, pixels[i].b);
-  }
-}
-
-void race(float progress, unsigned short pixelCount, Anim_Clip *clip) {
-  // animate a dot forward then backwards.
-  unsigned char iterations = 2;
-  unsigned short lastIndex = pixelCount - 1;
-  // get a position into the total length (iterations * number of pixels)
-  unsigned short position = (float)lastIndex * (float)iterations * progress;
-  // the even iterations are going backwards...
-  unsigned short ledToLight = position % (lastIndex * 2);
-  if (ledToLight > lastIndex) {
-    ledToLight = lastIndex - (ledToLight - lastIndex);
-  }
-  // Serial.print("bounce: position: ");
-  // Serial.print(position);
-  // Serial.print(", progress: ");
-  // Serial.print(progress);
-  // Serial.print(", ledToLight ");
-  // Serial.println(ledToLight);
-
-  CHSV newColor;
-  for(unsigned short i=0; i<pixelCount; i++) {
-    unsigned short distance = (unsigned int)ledToLight - i;
-    if (distance == 0) {
-      newColor = clip->endColor;
-    } else if (distance <= pixelCount/5) {
-      newColor.hue = clip->endColor.hue / distance;
-      newColor.sat = clip->endColor.sat / distance;
-      newColor.val = clip->endColor.val / distance;
-    } else {
-      newColor.hue = 0;
-      newColor.sat = 0;
-      newColor.val = 0;
-    }
-    pixels[i] = newColor;
-    // debugPrint("%d: %d,%d,%d; ", i, pixels[i].h, pixels[i].g, pixels[i].b);
-  }
-  // debugPrint("\n");
-}

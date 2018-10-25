@@ -2,41 +2,51 @@
 #define FX_HELPERS_H
 // shared helpers
 
-#include "../config.h"
-#include "./Fx_Types.h"
+enum Animation { None = 0, AllOff, Blink, Pulse, Race, Cylon };
 
-void _noPrint(const char *fmt, ...);
+typedef struct Anim_Clip {
+  enum Animation anim;
+  CHSV startColor;
+  CHSV endColor;
+  char initialDirection;
+  unsigned int duration;
+  // repeat can go to -1 so needs to be signed
+  short repeat;
+  // lets keep all time values as long for now
+  unsigned long startTime;
+} Anim_Clip;
 
-#ifdef DEBUG
-  #include <stdio.h>
-  #include <stdarg.h>
-
-  void debugPrint(const char *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-  #ifdef HardwareSerial_h
-    char buffer[100]; // swag
-    vsprintf(buffer, fmt, args);
-    Serial.print(buffer);
-  #else
-    vprintf(fmt, args);
-    va_end(args);
-  #endif
-  }
-#else
-  // noop version of debugPrint
-  void debugPrint(const char *fmt, ...) {}
-#endif
-
-int clamp(int num, int lbound, int ubound) {
-  if (num < lbound) {
-    num = lbound;
-  }
-  if (num > ubound) {
-    num = ubound;
-  }
-  return num;
+void dumpColor(CRGB color) {
+  Serial.print(color.r);
+  Serial.print(",");
+  Serial.print(color.g);
+  Serial.print(",");
+  Serial.println(color.b);
 }
+
+void dumpClip(Anim_Clip* clip) {
+  Serial.print("clip, anim: ");
+  Serial.print(clip->anim);
+  Serial.print(": ");
+  Serial.print(clip->startColor.h);
+  Serial.print(",");
+  Serial.print(clip->startColor.s);
+  Serial.print(",");
+  Serial.print(clip->startColor.v);
+  Serial.print(" - ");
+  Serial.print(clip->endColor.h);
+  Serial.print(",");
+  Serial.print(clip->endColor.s);
+  Serial.print(",");
+  Serial.println(clip->endColor.v);
+
+  Serial.print("duration: ");
+  Serial.print(clip->duration);
+  Serial.print(", repeat: ");
+  Serial.print(clip->repeat);
+  Serial.println(";");
+}
+
 
 float clampFloat(float num, float lbound, float ubound) {
   if (num < lbound) {
@@ -47,12 +57,6 @@ float clampFloat(float num, float lbound, float ubound) {
   }
   return num;
 }
-
-#if DEBUG
-  #define Assert(Expression) if(!(Expression)) {*(int *)0 = 0;}
-#else
-  #define Assert(Expression)
-#endif
 
 int asciiToInt(char c) {
   if (c >= 48 && c <= 57) {
@@ -67,12 +71,12 @@ int asciiToInt(char c) {
   return 0;
 }
 
-RGBColor hexColorStringToRGBStruct(char* hexStr) {
+CRGB hexColorStringToRGBStruct(char* hexStr) {
   // expects an array with 7 items: "#fe01ba"
   // 0:48 -> 9:58
   // A:65 -> F:70
   // a:97 -> f:102
-  RGBColor color;
+  CRGB color;
   color.r = ((unsigned char)asciiToInt(hexStr[1]) << 4) + asciiToInt(hexStr[2]);
   color.g = ((unsigned char)asciiToInt(hexStr[3]) << 4) + asciiToInt(hexStr[4]);
   color.b = ((unsigned char)asciiToInt(hexStr[5]) << 4) + asciiToInt(hexStr[6]);

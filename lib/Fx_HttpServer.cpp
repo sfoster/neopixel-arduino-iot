@@ -8,7 +8,7 @@
 ESP8266WebServer server(80);
 
 void Fx_HttpServer_handleResetPost() {
-  debugPrint("Got reset POST\n");
+  Serial.println("Got reset POST");
 }
 
 void Fx_HttpServer_handleAnimationPost() {
@@ -16,7 +16,6 @@ void Fx_HttpServer_handleAnimationPost() {
   char nameBuf[80];
   String nameString = server.arg("animationName");
   nameString.toCharArray(nameBuf, 80);
-  // AnimateFnPointer animateFn;
 
   // if (nameString == "allOff") {
   //   animateFn = &allOff;
@@ -31,19 +30,16 @@ void Fx_HttpServer_handleAnimationPost() {
   //   return;
   // }
 
-  // debugPrint("Handling POST to /animation, creating clip with %s", nameBuf);
-
   long duration = (long)server.arg("duration").toInt();
 
   char colorBuf[7];
   server.arg("startColor").toCharArray(colorBuf, 7);
-  RGBColor startColor = hexColorStringToRGBStruct(colorBuf);
+  CRGB startColor = hexColorStringToRGBStruct(colorBuf);
 
   server.arg("endColor").toCharArray(colorBuf, 7);
-  RGBColor endColor = hexColorStringToRGBStruct(colorBuf);
+  CRGB endColor = hexColorStringToRGBStruct(colorBuf);
 
   int initialDirection = server.arg("initialDirection").toInt();
-  bool isForeground = server.hasArg("isForeground");
 
   String strRepeat = server.arg("repeat");
   long repeat;
@@ -53,13 +49,15 @@ void Fx_HttpServer_handleAnimationPost() {
     repeat = (long)strRepeat.toInt();
   }
 
-  Fx_AnimationParams params;
-  params.startColor = startColor;
-  params.endColor = endColor;
-  params.initialDirection = initialDirection;
-  params.isForeground = isForeground;
+  Anim_Clip clip;
+  clip.anim = Pulse;
+  clip.startColor = { .hue=0, .sat=0, .val=0 };
+  clip.endColor = { .hue=0, .sat=0, .val=0 };
+  clip.initialDirection = initialDirection;
+  clip.repeat = repeat;
+  clip.duration = duration;
 
-  debugPrint("Prepared params %d, %d, %d\n", params.startColor.r, params.startColor.g, params.startColor.b);
+  Serial.println("Prepared clip");
   // Fx_Controller_AddClip(animateFn, isForeground, duration, repeat, params);
 }
 
